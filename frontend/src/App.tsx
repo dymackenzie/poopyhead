@@ -21,6 +21,22 @@ export function App(): React.ReactElement {
       onConnect: () => {
         connect();
       },
+      onPlayerJoined: (data: Record<string, any>) => {
+        if (data?.lobby) {
+          updateGameState({ lobbyPlayers: data.lobby.players, lobbyCode: data.lobby.code });
+        }
+      },
+      onPlayerReady: (data: Record<string, any>) => {
+        if (data?.lobby) {
+          updateGameState({ lobbyPlayers: data.lobby.players, lobbyCode: data.lobby.code, canStartGame: data.canStart ?? false });
+        } else if (data?.playerId) {
+          // fallback: update single player's ready flag
+          useGameStore.setState((state: any) => ({
+            lobbyPlayers: state.lobbyPlayers.map((p: any) => (p.id === data.playerId ? { ...p, ready: data.ready } : p)),
+            canStartGame: data.canStart ?? state.canStartGame,
+          }));
+        }
+      },
       onLobbyCreated: (data: Record<string, any>) => {
         updateGameState(data);
       },

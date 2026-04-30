@@ -124,8 +124,7 @@ function handleCreateLobby(
     
     callback({ success: true, lobby, playerId });
     socket.to(`lobby:${lobby.code}`).emit('playerJoined', {
-      username: data.username,
-      playerCount: lobby.players.length,
+      lobby,
     });
     
     console.log(`[Lobby] ${data.username} created lobby ${lobby.code}`);
@@ -176,8 +175,7 @@ function handleJoinLobby(
     
     callback({ success: true, lobby: updatedLobby, playerId });
     io.to(`lobby:${data.code}`).emit('playerJoined', {
-      username: data.username,
-      playerCount: updatedLobby.players.length,
+      lobby: updatedLobby,
     });
     
     console.log(`[Lobby] ${data.username} joined lobby ${data.code}`);
@@ -205,6 +203,7 @@ function handleSetReady(
     
     callback({ success: true, lobby: updatedLobby });
     io.to(`lobby:${data.code}`).emit('playerReady', {
+      lobby: updatedLobby,
       playerId: data.playerId,
       ready: data.ready,
       canStart: canStartGame(updatedLobby),
