@@ -1,0 +1,164 @@
+/* Game Screen Styles */
+
+.game-screen {
+  width: 100%;
+  max-width: 800px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #1E5128 0%, #2C5F2D 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  color: white;
+}
+
+.game-header {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.game-header h2 {
+  font-size: 24px;
+  margin: 0;
+}
+
+.game-board {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  padding: 24px;
+  gap: 20px;
+}
+
+.pile-area,
+.table-area {
+  text-align: center;
+}
+
+.pile-title,
+.table-title {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.pile-display,
+.table-cards {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.card {
+  width: 60px;
+  height: 80px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-direction: column;
+}
+
+.pile-card {
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.table-card {
+  background: linear-gradient(135deg, #4ECDC4 0%, #7EDFC9 100%);
+  color: white;
+}
+
+.hand-area {
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.hand-title {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.hand-cards {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  overflow-y: auto;
+  max-height: 140px;
+  padding-bottom: 8px;
+}
+
+.hand-card {
+  background: linear-gradient(135deg, #FFA500 0%, #FFB84D 100%);
+  color: white;
+  border: 3px solid transparent;
+  transform: perspective(1000px) rotateX(-5deg);
+  position: relative;
+}
+
+.hand-card .suit {
+  font-size: 10px;
+}
+
+.hand-card:hover {
+  transform: perspective(1000px) rotateX(0deg) translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+.hand-card.selected {
+  border-color: #FFD700;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
+  transform: perspective(1000px) rotateX(0deg) translateY(-8px);
+}
+
+.hand-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.controls {
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.controls .button {
+  flex: 1;
+  max-width: 200px;
+}
+
+@media (max-width: 600px) {
+  .card {
+    width: 50px;
+    height: 65px;
+    font-size: 12px;
+  }
+  
+  .hand-cards {
+    gap: 8px;
+  }
+  
+  .game-board {
+    padding: 16px;
+  }
+}
