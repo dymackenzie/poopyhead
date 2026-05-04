@@ -1,0 +1,14 @@
+.ph-button {
+  transition: background var(--timing-fast), border-color var(--timing-fast), transform var(--timing-fast);
+}
+
+.ph-button.button-tertiary {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-soft);
+}
+
+.ph-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+}

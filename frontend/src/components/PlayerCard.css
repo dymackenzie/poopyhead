@@ -1,0 +1,32 @@
+.player-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+}
+
+.player-card.is-highlight {
+  border-color: var(--text-primary);
+}
+
+.player-name {
+  color: var(--text-primary);
+}
+
+.player-meta {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.player-card.is-ready .player-meta {
+  color: var(--state-success);
+  font-weight: 600;
+}
+
+.player-card.is-waiting .player-meta {
+  color: var(--text-muted);
+}

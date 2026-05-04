@@ -2,45 +2,86 @@
 
 .endgame-screen {
   width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
+  padding: var(--space-4);
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  background: var(--bg-base);
 }
 
 .endgame-card {
-  background: white;
-  border-radius: 12px;
-  padding: 40px 24px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  text-align: center;
+  width: 100%;
+  max-width: 520px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  padding: var(--space-6) var(--space-4);
+  box-shadow: var(--shadow-low);
+  text-align: left;
 }
 
 .endgame-card h1 {
-  font-size: 48px;
-  margin-bottom: 16px;
-  color: #FF6B6B;
+  font-size: clamp(34px, 10vw, 48px);
+  margin-bottom: var(--space-3);
+  color: var(--text-primary);
 }
 
 .endgame-card h2 {
-  font-size: 32px;
-  margin-bottom: 24px;
-  color: #2C3E50;
+  font-size: clamp(24px, 8vw, 32px);
+  margin-bottom: var(--space-4);
+  color: var(--text-primary);
+}
+
+.endgame-kicker {
+  font-size: var(--font-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin: 0 0 var(--space-2);
 }
 
 .loser-text {
-  font-size: 18px;
-  color: #666;
-  margin: 20px 0 30px;
+  font-size: var(--font-base);
+  color: var(--text-secondary);
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.standings {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.standings-header,
+.standings-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.standings-header {
+  background: #171717;
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.standings-row {
+  border-top: 1px solid var(--border-soft);
+}
+
+.standings-row:nth-child(odd) {
+  background: #101010;
 }
 
 .button-group {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 24px;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
 }
 
 @media (min-width: 400px) {

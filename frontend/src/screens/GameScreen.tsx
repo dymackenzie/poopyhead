@@ -5,18 +5,29 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store';
 import { playCards } from '../socketClient';
+import Button from '../components/Button';
+import Card from '../components/Card';
+import PlayerCard from '../components/PlayerCard';
+import PileDisplay from '../components/PileDisplay';
 import './GameScreen.css';
+import type { GameCard, LobbyPlayer } from '../types/game';
 
 export function GameScreen(): React.ReactElement {
-  const hand = useGameStore((state: any) => state.hand);
-  const tableCards = useGameStore((state: any) => state.tableCards);
-  const playPile = useGameStore((state: any) => state.playPile);
-  const playableCards = useGameStore((state: any) => state.playableCards);
-  const currentPlayerUsername = useGameStore((state: any) => state.currentPlayerUsername);
-  const gameId = useGameStore((state: any) => state.gameId);
-  const currentPlayerId = useGameStore((state: any) => state.currentPlayerId);
+  const hand = useGameStore((state) => state.hand);
+  const tableCards = useGameStore((state) => state.tableCards);
+  const playPile = useGameStore((state) => state.playPile);
+  const playableCards = useGameStore((state) => state.playableCards);
+  const currentPlayerUsername = useGameStore((state) => state.currentPlayerUsername);
+  const gameId = useGameStore((state) => state.gameId);
+  const currentPlayerId = useGameStore((state) => state.currentPlayerId);
+  const lobbyPlayers = useGameStore((state) => state.lobbyPlayers);
 
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
+
+  const you = lobbyPlayers.find((player: LobbyPlayer) => player.id === currentPlayerId);
+  const opponents = lobbyPlayers.filter((player: LobbyPlayer) => player.id !== currentPlayerId);
+  const topPileCard = playPile.length > 0 ? playPile[playPile.length - 1] : null;
+  const isYourTurn = !!you && currentPlayerUsername === you.username;
 
   const handleSelectCard = (cardId: string): void => {
     setSelectedCards((prev: string[]) =>
@@ -33,30 +44,36 @@ export function GameScreen(): React.ReactElement {
   return (
     <div className="game-screen">
       <div className="game-header">
-        <h2>Current: {currentPlayerUsername}</h2>
+        <div className={`turn-pill ${isYourTurn ? 'is-active animate-turn-pulse' : ''}`}>
+          {isYourTurn ? 'Your Turn' : `${currentPlayerUsername || 'Waiting'} Turn`}
+        </div>
+        <div className="player-rail" role="list" aria-label="Opponents">
+          {opponents.map((player: LobbyPlayer, index: number) => (
+            <PlayerCard
+              key={player.id}
+              className="opponent-chip animate-slide-in"
+              name={player.username}
+              meta={`${player.cardsRemaining ?? '-'} cards`}
+              style={{ animationDelay: `${index * 30}ms` }}
+            />
+          ))}
+        </div>
       </div>
 
       <div className="game-board">
         {/* Pile */}
-        <div className="pile-area">
-          <div className="pile-title">Pile ({playPile.length})</div>
-          <div className="pile-display">
-            {playPile.length > 0 && (
-              <div className="card pile-card">
-                {playPile[playPile.length - 1]?.rank} {playPile[playPile.length - 1]?.suit}
-              </div>
-            )}
-          </div>
-        </div>
+        <PileDisplay
+          title="Play Pile"
+          count={playPile.length}
+          topCard={topPileCard}
+        />
 
         {/* Table Cards */}
         <div className="table-area">
-          <div className="table-title">Table Cards</div>
+          <div className="table-title">Table</div>
           <div className="table-cards">
-            {tableCards.map((card: any, idx: number) => (
-              <div key={idx} className="card table-card">
-                {card.rank} {card.suit}
-              </div>
+            {tableCards.map((card: GameCard, idx: number) => (
+              <Card key={card.id} className="table-card animate-slide-up" rank={card.rank} suit={card.suit} style={{ animationDelay: `${idx * 25}ms` }} />
             ))}
           </div>
         </div>
@@ -64,31 +81,31 @@ export function GameScreen(): React.ReactElement {
 
       {/* Hand */}
       <div className="hand-area">
-        <div className="hand-title">Your Hand</div>
+        <div className="hand-title">Your Hand ({hand.length})</div>
         <div className="hand-cards">
-          {hand.map((card: any) => (
-            <div
+          {hand.map((card: GameCard, index: number) => (
+            <Card
               key={card.id}
-              className={`card hand-card ${
-                selectedCards.includes(card.id) ? 'selected' : ''
-              } ${!playableCards.includes(card.id) ? 'disabled' : ''}`}
+              className="hand-card animate-slide-up"
+              selected={selectedCards.includes(card.id)}
+              disabled={!playableCards.includes(card.id)}
               onClick={() => handleSelectCard(card.id)}
-            >
-              {card.rank}
-              <div className="suit">{card.suit}</div>
-            </div>
+              rank={card.rank}
+              suit={card.suit}
+              style={{ animationDelay: `${index * 20}ms` }}
+            />
           ))}
         </div>
       </div>
 
       {/* Controls */}
       <div className="controls">
-        <button className="button button-primary" onClick={handlePlayCards} disabled={selectedCards.length === 0}>
+        <Button variant="primary" onClick={handlePlayCards} disabled={selectedCards.length === 0}>
           Play ({selectedCards.length})
-        </button>
-        <button className="button button-secondary">
+        </Button>
+        <Button variant="secondary" disabled>
           Pickup
-        </button>
+        </Button>
       </div>
     </div>
   );

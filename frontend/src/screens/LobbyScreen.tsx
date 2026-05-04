@@ -5,7 +5,11 @@
 import React, { useState } from 'react';
 import { useGameStore } from '../store';
 import { createLobby, joinLobby, setPlayerReady, startGame } from '../socketClient';
+import Button from '../components/Button';
+import Input from '../components/Input';
+import PlayerCard from '../components/PlayerCard';
 import './LobbyScreen.css';
+import type { GamePlayer } from '../store';
 
 export function LobbyScreen(): React.ReactElement {
   const [mode, setMode] = useState<'home' | 'create' | 'join'>('home');
@@ -14,9 +18,9 @@ export function LobbyScreen(): React.ReactElement {
   const [bombEnabled, setBombEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const lobbyPlayers = useGameStore((state: any) => state.lobbyPlayers);
-  const currentLobbyCode = useGameStore((state: any) => state.lobbyCode);
-  const currentPlayerId = useGameStore((state: any) => state.currentPlayerId);
+  const lobbyPlayers = useGameStore((state) => state.lobbyPlayers);
+  const currentLobbyCode = useGameStore((state) => state.lobbyCode);
+  const currentPlayerId = useGameStore((state) => state.currentPlayerId);
 
   const handleCreateLobby = async (): Promise<void> => {
     if (!username.trim()) return;
@@ -67,18 +71,19 @@ export function LobbyScreen(): React.ReactElement {
   if (!currentLobbyCode) {
     return (
       <div className="lobby-screen">
-        <div className="lobby-card">
+        <div className="lobby-card animate-fade-in">
           {mode === 'home' && (
             <>
-              <h1>🎴 Poopyhead</h1>
-              <p>A fun card game for friends!</p>
+              <p className="lobby-kicker">Card Game</p>
+              <h1>Poopyhead</h1>
+              <p className="lobby-subtitle">Create a table or join with a lobby code.</p>
               <div className="button-group">
-                <button className="button button-primary" onClick={() => setMode('create')}>
+                <Button variant="primary" onClick={() => setMode('create')}>
                   Create Game
-                </button>
-                <button className="button button-secondary" onClick={() => setMode('join')}>
+                </Button>
+                <Button variant="secondary" onClick={() => setMode('join')}>
                   Join Game
-                </button>
+                </Button>
               </div>
             </>
           )}
@@ -86,50 +91,52 @@ export function LobbyScreen(): React.ReactElement {
           {mode === 'create' && (
             <>
               <h2>Create New Game</h2>
-              <input
-                className="input"
-                type="text"
-                placeholder="Your username"
+              <Input
+                id="create-username"
+                label="Username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={setUsername}
+                placeholder="Your username"
               />
               <label className="checkbox-label">
                 <input type="checkbox" checked={bombEnabled} onChange={(e) => setBombEnabled(e.target.checked)} />
                 Enable 10-Bomb rule
               </label>
-              <button className="button button-primary" onClick={handleCreateLobby} disabled={loading}>
+              <Button variant="primary" onClick={handleCreateLobby} disabled={loading}>
                 {loading ? 'Creating...' : 'Create Game'}
-              </button>
-              <button className="button button-secondary" onClick={() => setMode('home')}>
+              </Button>
+              <Button variant="secondary" onClick={() => setMode('home')}>
                 Back
-              </button>
+              </Button>
             </>
           )}
 
           {mode === 'join' && (
             <>
               <h2>Join Game</h2>
-              <input
-                className="input"
-                type="text"
-                placeholder="Your username"
+              <Input
+                id="join-username"
+                label="Username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={setUsername}
+                placeholder="Your username"
               />
-              <input
-                className="input"
-                type="text"
+              <Input
+                id="lobby-code"
+                label="Lobby Code"
+                autoCapitalize="characters"
                 placeholder="Game code (e.g., ABC123)"
                 value={lobbyCode}
-                onChange={(e) => setLobbyCode(e.target.value.toUpperCase())}
+                onChange={(value) => setLobbyCode(value.toUpperCase())}
                 maxLength={6}
+                codeStyle
               />
-              <button className="button button-primary" onClick={handleJoinLobby} disabled={loading}>
+              <Button variant="primary" onClick={handleJoinLobby} disabled={loading}>
                 {loading ? 'Joining...' : 'Join Game'}
-              </button>
-              <button className="button button-secondary" onClick={() => setMode('home')}>
+              </Button>
+              <Button variant="secondary" onClick={() => setMode('home')}>
                 Back
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -139,29 +146,32 @@ export function LobbyScreen(): React.ReactElement {
 
   return (
     <div className="lobby-screen">
-      <div className="lobby-card">
+      <div className="lobby-card animate-fade-in">
         <h2>Game Lobby</h2>
         <p className="lobby-code">Code: <strong>{currentLobbyCode}</strong></p>
 
         <div className="players-list">
           <h3>Players ({lobbyPlayers.length})</h3>
-          {lobbyPlayers.map((player: any) => (
-            <div key={player.id} className="player-item">
-              <span>{player.username}</span>
-              <span className={player.ready ? 'ready' : 'not-ready'}>
-                {player.ready ? '✓ Ready' : 'Waiting...'}
-              </span>
-            </div>
+          {lobbyPlayers.map((player: GamePlayer, index: number) => (
+            <PlayerCard
+              key={player.id}
+              className="animate-slide-in"
+              name={player.username}
+              meta={player.ready ? 'Ready' : 'Waiting...'}
+              status={player.ready ? 'ready' : 'waiting'}
+              highlight={player.id === currentPlayerId}
+              style={{ animationDelay: `${index * 25}ms` }}
+            />
           ))}
         </div>
 
         <div className="button-group">
-          <button className="button button-primary" onClick={handleSetReady}>
+          <Button variant="primary" onClick={handleSetReady}>
             Ready!
-          </button>
-          <button className="button button-primary" onClick={handleStartGame} disabled={lobbyPlayers.length < 2}>
+          </Button>
+          <Button variant="primary" onClick={handleStartGame} disabled={lobbyPlayers.length < 2}>
             Start Game
-          </button>
+          </Button>
         </div>
       </div>
     </div>

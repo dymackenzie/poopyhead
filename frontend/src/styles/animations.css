@@ -1,0 +1,74 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes cardPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes turnPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 150ms ease-out;
+}
+
+.animate-slide-in {
+  animation: slideInLeft 150ms ease-out;
+}
+
+.animate-slide-up {
+  animation: slideInUp 200ms ease-out;
+}
+
+.animate-card-pulse {
+  animation: cardPulse var(--timing-card-play);
+}
+
+.animate-turn-pulse {
+  animation: turnPulse var(--timing-turn) 2;
+}

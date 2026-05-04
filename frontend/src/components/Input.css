@@ -1,0 +1,13 @@
+.ph-input-wrap {
+  width: 100%;
+}
+
+.ph-input-label {
+  margin-top: var(--space-2);
+}
+
+.ph-input.is-code {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}

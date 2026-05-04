@@ -2,163 +2,178 @@
 
 .game-screen {
   width: 100%;
-  max-width: 800px;
+  min-height: 100vh;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #1E5128 0%, #2C5F2D 100%);
-  border-radius: 12px;
+  background: var(--bg-base);
   overflow: hidden;
-  color: white;
+  color: var(--text-primary);
 }
 
 .game-header {
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.2);
-  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-  text-align: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-soft);
+  display: grid;
+  gap: var(--space-3);
 }
 
-.game-header h2 {
-  font-size: 24px;
-  margin: 0;
+.turn-pill {
+  display: inline-flex;
+  justify-self: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--font-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.turn-pill.is-active {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+}
+
+.player-rail {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+}
+
+.opponent-chip {
+  min-width: 130px;
+  background: var(--bg-surface);
+}
+
+.opponent-chip .player-name {
+  font-size: var(--font-base);
+}
+
+.opponent-chip .player-meta {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
 }
 
 .game-board {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-around;
+  justify-content: center;
   align-items: center;
-  padding: 24px;
-  gap: 20px;
+  padding: var(--space-4);
+  gap: var(--space-5);
 }
 
-.pile-area,
 .table-area {
   text-align: center;
+  width: 100%;
+  max-width: 320px;
 }
 
-.pile-title,
 .table-title {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 8px;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
 }
 
-.pile-display,
 .table-cards {
   display: flex;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
-.card {
-  width: 60px;
-  height: 80px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex-direction: column;
-}
-
 .pile-card {
-  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E8E 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  width: 58px;
+  height: 82px;
+  cursor: default;
+  box-shadow: var(--shadow-mid);
 }
 
 .table-card {
-  background: linear-gradient(135deg, #4ECDC4 0%, #7EDFC9 100%);
-  color: white;
+  background: var(--bg-surface-2);
 }
 
 .hand-area {
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.3);
-  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border-soft);
 }
 
 .hand-title {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 12px;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.08em;
 }
 
 .hand-cards {
   display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  overflow-y: auto;
-  max-height: 140px;
-  padding-bottom: 8px;
+  gap: var(--space-2);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  padding-bottom: var(--space-1);
 }
 
 .hand-card {
-  background: linear-gradient(135deg, #FFA500 0%, #FFB84D 100%);
-  color: white;
-  border: 3px solid transparent;
-  transform: perspective(1000px) rotateX(-5deg);
-  position: relative;
-}
-
-.hand-card .suit {
-  font-size: 10px;
-}
-
-.hand-card:hover {
-  transform: perspective(1000px) rotateX(0deg) translateY(-4px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-}
-
-.hand-card.selected {
-  border-color: #FFD700;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
-  transform: perspective(1000px) rotateX(0deg) translateY(-8px);
-}
-
-.hand-card.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+  flex: 0 0 auto;
+  scroll-snap-align: start;
 }
 
 .controls {
-  padding: 16px;
+  padding: var(--space-3) var(--space-4) var(--space-4);
   display: flex;
-  gap: 12px;
+  gap: var(--space-2);
   justify-content: center;
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 2px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-surface);
 }
 
 .controls .button {
   flex: 1;
-  max-width: 200px;
 }
 
 @media (max-width: 600px) {
-  .card {
-    width: 50px;
-    height: 65px;
-    font-size: 12px;
-  }
-  
-  .hand-cards {
-    gap: 8px;
-  }
-  
   .game-board {
-    padding: 16px;
+    gap: var(--space-4);
+    padding: var(--space-3);
+  }
+
+  .table-area {
+    max-width: 280px;
+  }
+
+  .hand-card,
+  .table-card {
+    width: 46px;
+    height: 68px;
+  }
+
+  .pile-card {
+    width: 54px;
+    height: 76px;
+  }
+}
+
+@media (min-width: 768px) {
+  .game-board {
+    padding: var(--space-5);
+  }
+
+  .hand-card,
+  .table-card {
+    width: 60px;
+    height: 92px;
+  }
+
+  .pile-card {
+    width: 66px;
+    height: 102px;
   }
 }

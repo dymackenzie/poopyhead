@@ -5,14 +5,11 @@
  */
 
 import { create } from 'zustand';
+import type { GameCard, GameStatePatch, LobbyPlayer, LobbySettings } from './types/game';
 
-export interface GamePlayer {
-  id: string;
-  username: string;
-  cardsRemaining: number;
-  isCurrentPlayer: boolean;
-  isConnected: boolean;
-}
+export type GamePlayer = LobbyPlayer;
+
+export type GameStatus = 'lobby' | 'playing' | 'ended' | 'rematch';
 
 export interface GameState {
   // Connection & Session
@@ -27,25 +24,25 @@ export interface GameState {
 
   // Game
   gameId?: string;
-  gameStatus: 'lobby' | 'playing' | 'ended' | 'rematch';
-  hand: any[];
-  tableCards: any[];
-  blindCards: any[];
-  playPile: any[];
+  gameStatus: GameStatus;
+  hand: GameCard[];
+  tableCards: GameCard[];
+  blindCards: GameCard[];
+  playPile: GameCard[];
   currentPlayerUsername?: string;
-  playableCards: string[]; // Card IDs that can be played
+  playableCards: string[];
 
   // Actions
   connect: () => void;
   disconnect: () => void;
-  createLobby: (username: string, settings: Record<string, any>) => void;
+  createLobby: (username: string, settings: LobbySettings) => void;
   joinLobby: (code: string, username: string) => void;
   setReady: (ready: boolean) => void;
   startGame: (direction: 'clockwise' | 'counterclockwise') => void;
   playCards: (cardIds: string[]) => void;
-  updateGameState: (state: Partial<GameState>) => void;
+  updateGameState: (state: Partial<GameState> | GameStatePatch) => void;
   updatePlayableCards: (cardIds: string[]) => void;
-  setGameStatus: (status: 'lobby' | 'playing' | 'ended' | 'rematch') => void;
+  setGameStatus: (status: GameStatus) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -64,7 +61,7 @@ export const useGameStore = create<GameState>((set) => ({
   connect: () => set({ connected: true }),
   disconnect: () => set({ connected: false }),
 
-  createLobby: (_username: string, _settings: Record<string, any>) => {
+  createLobby: (_username: string, _settings: LobbySettings) => {
     set({ lobbyCode: 'ABC123' }); // Placeholder
   },
 
@@ -84,7 +81,7 @@ export const useGameStore = create<GameState>((set) => ({
     // Emit to server
   },
 
-  updateGameState: (state: Partial<GameState>) => {
+  updateGameState: (state: Partial<GameState> | GameStatePatch) => {
     set(state);
   },
 
@@ -92,7 +89,7 @@ export const useGameStore = create<GameState>((set) => ({
     set({ playableCards: cardIds });
   },
 
-  setGameStatus: (status: 'lobby' | 'playing' | 'ended' | 'rematch') => {
+  setGameStatus: (status: GameStatus) => {
     set({ gameStatus: status });
   },
 }));

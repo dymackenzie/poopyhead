@@ -9,11 +9,13 @@ import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 import EndgameScreen from './screens/EndgameScreen';
 import './App.css';
+import type { GamePlayer } from './store';
+import type { LobbyResponse, PlayerJoinedPayload, PlayerReadyPayload } from './types/game';
 
 export function App(): React.ReactElement {
-  const gameStatus = useGameStore((state: any) => state.gameStatus);
-  const connect = useGameStore((state: any) => state.connect);
-  const updateGameState = useGameStore((state: any) => state.updateGameState);
+  const gameStatus = useGameStore((state) => state.gameStatus);
+  const connect = useGameStore((state) => state.connect);
+  const updateGameState = useGameStore((state) => state.updateGameState);
 
   useEffect(() => {
     // Initialize socket connection
@@ -21,29 +23,31 @@ export function App(): React.ReactElement {
       onConnect: () => {
         connect();
       },
-      onPlayerJoined: (data: Record<string, any>) => {
+      onPlayerJoined: (data: PlayerJoinedPayload) => {
         if (data?.lobby) {
           updateGameState({ lobbyPlayers: data.lobby.players, lobbyCode: data.lobby.code });
         }
       },
-      onPlayerReady: (data: Record<string, any>) => {
+      onPlayerReady: (data: PlayerReadyPayload) => {
         if (data?.lobby) {
           updateGameState({ lobbyPlayers: data.lobby.players, lobbyCode: data.lobby.code, canStartGame: data.canStart ?? false });
         } else if (data?.playerId) {
           // fallback: update single player's ready flag
-          useGameStore.setState((state: any) => ({
-            lobbyPlayers: state.lobbyPlayers.map((p: any) => (p.id === data.playerId ? { ...p, ready: data.ready } : p)),
+          useGameStore.setState((state) => ({
+            lobbyPlayers: state.lobbyPlayers.map((player: GamePlayer) => (player.id === data.playerId ? { ...player, ready: data.ready } : player)),
             canStartGame: data.canStart ?? state.canStartGame,
           }));
         }
       },
-      onLobbyCreated: (data: Record<string, any>) => {
-        updateGameState(data);
+      onLobbyCreated: (data: LobbyResponse) => {
+        if (data.lobby) {
+          updateGameState({ lobbyPlayers: data.lobby.players, lobbyCode: data.lobby.code });
+        }
       },
-      onGameStarted: (data: Record<string, any>) => {
+      onGameStarted: (data) => {
         updateGameState({ gameStatus: 'playing', ...data });
       },
-      onCardPlayed: (data: Record<string, any>) => {
+      onCardPlayed: (data) => {
         updateGameState(data);
       },
     });

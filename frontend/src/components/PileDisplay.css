@@ -1,0 +1,35 @@
+.pile-area {
+  text-align: center;
+  width: 100%;
+  max-width: 320px;
+}
+
+.pile-title {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.pile-display {
+  min-height: 92px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-3);
+}
+
+.pile-empty {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.pile-count {
+  margin-top: var(--space-2);
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
