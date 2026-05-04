@@ -9,8 +9,8 @@ You are the Poopyhead implementation executor.
 
 Your job is to carry out the Poopyhead implementation plan incrementally using the repository roadmap and rules.
 
-Always treat [INITIAL_PLAN.txt](../planning/INITIAL_PLAN.txt) as the authoritative source for gameplay behavior, edge cases, and rule precedence.
-Use [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../planning/POOPYHEAD_IMPLEMENTATION_PLAN.txt) as the implementation roadmap.
+Always treat [INITIAL_PLAN.txt](../../planning/initial/INITIAL_PLAN.txt) as the authoritative source for gameplay behavior, edge cases, and rule precedence.
+Use [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../../planning/initial/POOPYHEAD_IMPLEMENTATION_PLAN.txt) as the implementation roadmap.
 
 ## Constraints
 - Complete only one plan step at a time.
@@ -40,8 +40,8 @@ For each step, report:
 ## Poopyhead MVP Implementation Plan
 
 ### Scope Basis
-- Authoritative gameplay behavior and precedence come from [INITIAL_PLAN.txt](../planning/INITIAL_PLAN.txt).
-- Delivery roadmap and stack direction come from [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../planning/POOPYHEAD_IMPLEMENTATION_PLAN.txt).
+- Authoritative gameplay behavior and precedence come from [INITIAL_PLAN.txt](../../planning/initial/INITIAL_PLAN.txt).
+- Delivery roadmap and stack direction come from [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../../planning/initial/POOPYHEAD_IMPLEMENTATION_PLAN.txt).
 - This plan is ordered for one executor agent to implement incrementally with validation at each stage.
 
 ### Ordered Steps
@@ -56,7 +56,7 @@ For each step, report:
   - Define zone order and restrictions: hand first, then table face-up, then blind.
   - Define pickup outcomes for hand/table/blind failures exactly per rules.
 - Validation:
-  - Rule matrix maps every statement in [INITIAL_PLAN.txt](../planning/INITIAL_PLAN.txt) to one behavior entry.
+  - Rule matrix maps every statement in [INITIAL_PLAN.txt](../../planning/initial/INITIAL_PLAN.txt) to one behavior entry.
   - No unresolved conflicts in precedence.
 - Stop condition: Signed-off rule matrix with no TODOs.
 
@@ -80,7 +80,7 @@ For each step, report:
   - Implement hand size rule: 4 cards each when player count is a multiple of 5, else 5 cards.
   - Deal 3 blind cards per player.
   - Implement face-up table selection workflow (player chooses best 3 from hand), then draw 3 replacements.
-  - Implement first-player determination rules from [INITIAL_PLAN.txt](../planning/INITIAL_PLAN.txt).
+  - Implement first-player determination rules from [INITIAL_PLAN.txt](../../planning/initial/INITIAL_PLAN.txt).
 - Validation:
   - Scenario tests for player counts 2 through 10, including multiple-of-5 boundaries.
 - Stop condition: Deterministic, valid initial game state across test matrix.
@@ -197,7 +197,7 @@ For each step, report:
   - Run full rule scenario suite from locked rule matrix.
   - Run multiplayer soak checks and reconnect stress checks.
   - Run mobile network-throttle checks.
-  - Verify MVP checklist alignment with [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../planning/POOPYHEAD_IMPLEMENTATION_PLAN.txt).
+  - Verify MVP checklist alignment with [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../../planning/initial/POOPYHEAD_IMPLEMENTATION_PLAN.txt).
 - Validation:
   - All critical scenarios pass with no blocking defects.
 - Stop condition: MVP release candidate accepted.

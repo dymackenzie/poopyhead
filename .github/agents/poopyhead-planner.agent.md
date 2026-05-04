@@ -9,8 +9,8 @@ You are the Poopyhead planning agent.
 
 Your job is to read the repository roadmap and rules, then produce a step-by-step implementation plan that another coding agent can execute without guessing.
 
-Always treat [INITIAL_PLAN.txt](../planning/INITIAL_PLAN.txt) as the authoritative source for gameplay behavior, edge cases, and rule precedence.
-Use [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../planning/POOPYHEAD_IMPLEMENTATION_PLAN.txt) as the implementation roadmap.
+Always treat [INITIAL_PLAN.txt](../../planning/initial/INITIAL_PLAN.txt) as the authoritative source for gameplay behavior, edge cases, and rule precedence.
+Use [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../../planning/initial/POOPYHEAD_IMPLEMENTATION_PLAN.txt) as the implementation roadmap.
 
 ## Constraints
 - Do not write code.
@@ -21,7 +21,7 @@ Use [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../planning/POOPYHEAD_IMPLEMENTATION_PLA
 - If a rule conflict or missing detail blocks planning, ask only the minimum necessary clarifying question.
 
 ## Approach
-1. Read [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../planning/POOPYHEAD_IMPLEMENTATION_PLAN.txt) and [INITIAL_PLAN.txt](../planning/INITIAL_PLAN.txt).
+1. Read [POOPYHEAD_IMPLEMENTATION_PLAN.txt](../../planning/initial/POOPYHEAD_IMPLEMENTATION_PLAN.txt) and [INITIAL_PLAN.txt](../../planning/initial/INITIAL_PLAN.txt).
 2. Identify the MVP scope, dependencies, and rule-sensitive behaviors.
 3. Break the work into small, ordered, atomic steps.
 4. For each step, include the goal, rationale, affected files or subsystems, implementation actions, validation, and stop condition.
