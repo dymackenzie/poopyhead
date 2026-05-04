@@ -1,3 +1,4 @@
+
 .card {
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-strong);
@@ -6,7 +7,7 @@
   justify-content: space-between;
   flex-direction: column;
   padding: var(--space-2);
-  background: #0e0e0e;
+  background: var(--bg-surface);
   color: var(--text-primary);
   font-weight: 600;
   font-size: var(--font-base);
@@ -22,13 +23,13 @@
 }
 
 .card.selected {
-  border-color: #ffffff;
-  background: #161616;
+  border-color: var(--text-primary);
+  background: linear-gradient(180deg, #fff, #fbfbfb);
   transform: translateY(-4px) scale(1.02);
 }
 
 .card.disabled {
-  opacity: 0.45;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 

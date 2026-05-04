@@ -14,13 +14,14 @@
 
 .pile-display {
   min-height: 92px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border-soft);
+  background: rgba(255,255,255,0.94);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   display: flex;
   justify-content: center;
   align-items: center;
   padding: var(--space-3);
+  box-shadow: var(--shadow-low);
 }
 
 .pile-empty {
