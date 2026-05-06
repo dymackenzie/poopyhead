@@ -18,7 +18,7 @@ export function LobbyScreen(): React.ReactElement {
   const [mode, setMode] = useState<LobbyMode>('home');
   const [username, setUsername] = useState('');
   const [lobbyCode, setLobbyCode] = useState('');
-  const [bombEnabled, setBombEnabled] = useState(true);
+  const [bombEnabled, setBombEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -182,19 +182,19 @@ export function LobbyScreen(): React.ReactElement {
               </div>
             </div>
             <div className="lobby-home-copy">
-              <p className="lobby-kicker">Multiplayer Card Game</p>
+              <p className="lobby-kicker">a card game for bad people</p>
               <h1 className="lobby-title">Poopyhead</h1>
-              <p className="lobby-subtitle">Last one holding cards loses. Don't be the Poopyhead.</p>
+              <p className="lobby-subtitle">Be the first to dump your cards. Last one holding the pile earns the title.</p>
             </div>
             <div className="lobby-suit-divider" aria-hidden="true">
               <span className="lobby-suit-pips">♠ ♥ ♣ ♦</span>
             </div>
             <div className="lobby-home-actions">
               <Button variant="primary" onClick={() => setMode('create')}>
-                Create Game
+                Start a Game
               </Button>
               <Button variant="secondary" onClick={() => setMode('join')}>
-                Join Game
+                Join with Code
               </Button>
             </div>
             {!connected && (
@@ -206,7 +206,7 @@ export function LobbyScreen(): React.ReactElement {
         {mode === 'create' && (
           <div className="lobby-form animate-fade-in-up">
             <button className="lobby-back-btn" onClick={handleBack} aria-label="Go back">
-              &#8592; Back
+              <span className="back-arrow">&#8592;</span> Back
             </button>
             <h2 className="lobby-form-title">New Game</h2>
             <div className="lobby-fields">
@@ -215,7 +215,7 @@ export function LobbyScreen(): React.ReactElement {
                 label="Your Name"
                 value={username}
                 onChange={setUsername}
-                placeholder="Enter a username"
+                placeholder="something embarrassing"
                 autoFocus
               />
               <label className="lobby-checkbox">
@@ -238,7 +238,7 @@ export function LobbyScreen(): React.ReactElement {
         {mode === 'join' && (
           <div className="lobby-form animate-fade-in-up">
             <button className="lobby-back-btn" onClick={handleBack} aria-label="Go back">
-              &#8592; Back
+              <span className="back-arrow">&#8592;</span> Back
             </button>
             <h2 className="lobby-form-title">Join Game</h2>
             <div className="lobby-fields">
@@ -247,7 +247,7 @@ export function LobbyScreen(): React.ReactElement {
                 label="Your Name"
                 value={username}
                 onChange={setUsername}
-                placeholder="Enter a username"
+                placeholder="something embarrassing"
                 autoFocus
               />
               <Input

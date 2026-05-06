@@ -1,8 +1,7 @@
 /* =============================================
-   Lobby Screen — Light Mode, Full Personality
+   Lobby Screen — Hand-crafted, irreverent
    ============================================= */
 
-/* === Suit watermark pattern for backgrounds === */
 @keyframes floatCard {
   0%, 100% { transform: translateY(0) rotate(-12deg); }
   50%       { transform: translateY(-6px) rotate(-12deg); }
@@ -19,9 +18,13 @@
 }
 
 @keyframes titleWiggle {
-  0%   { transform: rotate(-1.5deg); }
-  50%  { transform: rotate(1.5deg); }
-  100% { transform: rotate(-1.5deg); }
+  0%, 100% { transform: rotate(-1deg) skewX(-0.5deg); }
+  50%       { transform: rotate(1deg) skewX(0.5deg); }
+}
+
+@keyframes arrowBounce {
+  0%, 100% { transform: translateX(0); }
+  50%       { transform: translateX(-3px); }
 }
 
 .lobby-screen {
@@ -32,38 +35,63 @@
   justify-content: center;
   padding: var(--space-4);
   background: var(--bg-base);
+  /* Faint ruled-paper feel */
   background-image:
-    radial-gradient(circle at 15% 25%, rgba(245,166,35,0.07) 0%, transparent 45%),
-    radial-gradient(circle at 85% 75%, rgba(232,51,42,0.05) 0%, transparent 45%);
+    repeating-linear-gradient(
+      transparent,
+      transparent 31px,
+      rgba(0,0,0,0.04) 31px,
+      rgba(0,0,0,0.04) 32px
+    ),
+    radial-gradient(circle at 90% 10%, rgba(245,166,35,0.06) 0%, transparent 40%);
   overflow-y: auto;
 }
 
+/* === Panel — no rounded corporate card, just a thick-bordered box === */
+
 .lobby-panel {
   width: 100%;
-  max-width: 400px;
+  max-width: 390px;
   background: var(--bg-surface);
-  border: 2px solid var(--color-black);
-  border-radius: var(--radius-lg);
+  /* Slightly off — like it was stamped, not designed */
+  border: 3px solid var(--color-black);
+  border-radius: 4px;
   overflow: hidden;
-  box-shadow: 6px 6px 0 var(--color-black);
+  /* Bottom-right shadow: hand-pressed stamp feel */
+  box-shadow: 5px 5px 0 var(--color-black);
+  position: relative;
 }
 
-/* === Home View === */
+/* ──────────────────────────────────────────── */
+/* HOME VIEW                                   */
+/* ──────────────────────────────────────────── */
 
 .lobby-home {
   display: flex;
   flex-direction: column;
-  padding: var(--space-6) var(--space-5) var(--space-5);
-  gap: var(--space-5);
+  padding: var(--space-5) var(--space-5) var(--space-6);
+  gap: 0;
 }
 
+/* Red margin-line on the left, notebook style */
+.lobby-home::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 36px;
+  bottom: 0;
+  width: 2px;
+  background: rgba(232,51,42,0.3);
+  pointer-events: none;
+}
+
+/* Top card deco */
 .lobby-home-top {
   display: flex;
   justify-content: center;
-  padding: var(--space-2) 0 var(--space-1);
+  padding: var(--space-4) 0 var(--space-3);
 }
 
-/* Decorative card fan — now animated */
 .lobby-card-deco {
   position: relative;
   width: 150px;
@@ -74,7 +102,7 @@
   position: absolute;
   width: 66px;
   height: 92px;
-  border-radius: 9px;
+  border-radius: 6px;
   background: #FFFFFF;
   border: 2px solid var(--color-black);
   box-shadow: 3px 3px 0 var(--color-black);
@@ -125,64 +153,58 @@
   line-height: 1;
 }
 
-.lobby-deco-card--1 .lobby-deco-rank { color: var(--color-black); }
-.lobby-deco-card--1 .lobby-deco-suit { color: var(--color-black); }
-
 .lobby-deco-card--2 .lobby-deco-rank { color: #CC2020; }
 .lobby-deco-card--2 .lobby-deco-suit { color: #CC2020; }
-
-.lobby-deco-card--3 .lobby-deco-rank { color: var(--color-black); }
 .lobby-deco-card--3 .lobby-deco-suit { font-size: 18px; opacity: 0.85; }
 
-/* === Home copy === */
+/* === Copy block === */
 
 .lobby-home-copy {
-  text-align: center;
+  padding: var(--space-2) 0 var(--space-5);
 }
 
 .lobby-kicker {
-  font-size: var(--font-xs);
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.2em;
   color: var(--text-muted);
-  margin: 0 0 var(--space-2);
+  margin: 0 0 var(--space-1);
+  /* Shifted right slightly — off the margin line */
+  padding-left: 2px;
 }
 
+/* The big title — rubber stamp energy */
 .lobby-title {
-  font-size: clamp(40px, 12vw, 56px);
+  font-size: clamp(38px, 11vw, 56px);
   font-weight: 900;
-  letter-spacing: -0.03em;
-  line-height: 0.88;
+  letter-spacing: -0.04em;
+  line-height: 0.9;
   color: var(--color-black);
   margin: 0 0 var(--space-3);
   text-transform: uppercase;
-  /* playful slight tilt */
-  display: inline-block;
-  animation: titleWiggle 6s ease-in-out infinite;
-  transform-origin: center;
+  display: block;
+  animation: titleWiggle 8s ease-in-out infinite;
+  transform-origin: left center;
 }
 
 .lobby-subtitle {
   font-size: var(--font-sm);
   color: var(--text-muted);
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.55;
+  /* Italic like a note jotted below the title */
   font-style: italic;
+  max-width: 240px;
 }
 
-.lobby-home-actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
+/* === Divider — ruled line with suits === */
 
-/* === Suit pip divider === */
 .lobby-suit-divider {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  margin: 0;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
 }
 
 .lobby-suit-divider::before,
@@ -190,25 +212,55 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--border-strong);
+  /* Dashed like a tear-off line */
+  background: repeating-linear-gradient(
+    to right,
+    rgba(0,0,0,0.18) 0px,
+    rgba(0,0,0,0.18) 5px,
+    transparent 5px,
+    transparent 10px
+  );
 }
 
 .lobby-suit-pips {
   display: flex;
-  gap: var(--space-1);
+  gap: 5px;
   font-size: 11px;
   color: var(--text-muted);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   user-select: none;
 }
 
-/* === Form View === */
+/* === Action buttons — stacked, chunky, personality === */
+
+.lobby-home-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ──────────────────────────────────────────── */
+/* FORM VIEWS (create / join)                  */
+/* ──────────────────────────────────────────── */
 
 .lobby-form {
   display: flex;
   flex-direction: column;
   padding: var(--space-5);
   gap: var(--space-4);
+  position: relative;
+}
+
+/* Same notebook margin line on forms */
+.lobby-form::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 36px;
+  bottom: 0;
+  width: 2px;
+  background: rgba(232,51,42,0.25);
+  pointer-events: none;
 }
 
 .lobby-back-btn {
@@ -219,10 +271,10 @@
   font-weight: 700;
   cursor: pointer;
   padding: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  transition: color 120ms ease-out, transform 120ms ease-out;
+  gap: 5px;
+  transition: color 120ms ease-out;
   align-self: flex-start;
   min-height: 32px;
   letter-spacing: 0.02em;
@@ -230,7 +282,11 @@
 
 .lobby-back-btn:hover {
   color: var(--text-primary);
-  transform: translateX(-2px);
+}
+
+.lobby-back-btn .back-arrow {
+  display: inline-block;
+  animation: arrowBounce 1.6s ease-in-out infinite;
 }
 
 .lobby-form-title {
@@ -248,7 +304,8 @@
   gap: var(--space-4);
 }
 
-/* Custom toggle checkbox */
+/* === Toggle checkbox === */
+
 .lobby-checkbox {
   display: flex;
   align-items: center;
@@ -315,7 +372,7 @@
   flex: 1;
 }
 
-/* === Error / Status === */
+/* === Error / Status messages === */
 
 .lobby-error {
   font-size: var(--font-sm);
@@ -339,14 +396,17 @@
   margin: 0;
 }
 
-/* === In-Lobby (Waiting Room) View === */
+/* ──────────────────────────────────────────── */
+/* IN-LOBBY (WAITING ROOM)                     */
+/* ──────────────────────────────────────────── */
 
 .lobby-panel-header {
-  padding: var(--space-5) var(--space-5) var(--space-4);
+  padding: var(--space-4) var(--space-5) var(--space-4);
   border-bottom: 2px solid var(--border-soft);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  /* Slightly off-white header section */
   background: var(--bg-surface-2);
 }
 
@@ -380,11 +440,11 @@
   box-shadow: 0 0 0 3px rgba(40,167,69,0.2);
 }
 
-/* Lobby code display — punchy and monospaced */
+/* Lobby code — dashed box, like a form field you'd cut out */
 .lobby-code-block {
   background: var(--bg-elevated);
-  border: 2px dashed var(--border-strong);
-  border-radius: var(--radius-sm);
+  border: 2px dashed rgba(0,0,0,0.25);
+  border-radius: 4px;
   padding: var(--space-3) var(--space-4);
   display: flex;
   flex-direction: column;
@@ -410,7 +470,6 @@
   line-height: 1;
 }
 
-/* Share hint */
 .lobby-code-hint {
   font-size: 10px;
   color: var(--text-muted);
@@ -418,7 +477,7 @@
   font-weight: 500;
 }
 
-/* === Players list === */
+/* === Player list === */
 
 .lobby-players {
   padding: var(--space-4) var(--space-5);

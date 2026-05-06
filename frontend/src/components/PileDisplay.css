@@ -7,10 +7,10 @@
 
 .ph-pile-label {
   font-size: var(--font-xs);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.45);
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
 }
 
 .ph-pile-slot {
@@ -26,12 +26,12 @@
   width: 58px;
   height: 82px;
   border-radius: var(--card-radius);
-  border: 1.5px dashed rgba(255,255,255,0.15);
+  border: 1.5px dashed var(--border-strong);
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--font-xs);
-  color: rgba(255,255,255,0.25);
+  color: var(--text-muted);
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
@@ -39,7 +39,7 @@
 .ph-pile-count {
   font-size: var(--font-xs);
   font-weight: 700;
-  color: rgba(255,255,255,0.4);
+  color: var(--text-muted);
   letter-spacing: 0.05em;
 }
 
