@@ -62,8 +62,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const PORT = process.env.PORT || 3001;
 
 httpServer.listen(PORT, () => {
-  console.log(`🎮 Poopyhead server listening on port ${PORT}`);
-  console.log(`📝 Health check: http://localhost:${PORT}/health`);
+  console.log(`Poopyhead server listening on port ${PORT}`);
+  console.log(`Health check: http://localhost:${PORT}/health`);
 });
 
 // Graceful shutdown
