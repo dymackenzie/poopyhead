@@ -25,11 +25,19 @@ export interface GameState {
   // Game
   gameId?: string;
   gameStatus: GameStatus;
+  /** Current game phase within an active game */
+  phase: 'swapping' | 'playing';
+  /** How many players have submitted their swap selection */
+  swappedCount: number;
+  /** Total players in the current game (for swap progress display) */
+  totalPlayers: number;
   hand: GameCard[];
   tableCards: GameCard[];
   blindCards: GameCard[];
   playPile: GameCard[];
   currentPlayerUsername?: string;
+  /** Player ID of whoever's turn it currently is */
+  currentTurnPlayerId?: string;
   playableCards: string[];
 
   // Actions
@@ -51,6 +59,9 @@ export const useGameStore = create<GameState>((set) => ({
   lobbyPlayers: [],
   canStartGame: false,
   gameStatus: 'lobby',
+  phase: 'swapping',
+  swappedCount: 0,
+  totalPlayers: 0,
   hand: [],
   tableCards: [],
   blindCards: [],

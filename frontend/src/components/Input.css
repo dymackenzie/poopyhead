@@ -7,16 +7,17 @@
 
 .ph-input-label {
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .ph-input--code {
-  letter-spacing: 0.12em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-  font-size: var(--font-lg);
+  font-size: var(--font-xl);
+  font-weight: 800;
   text-align: center;
 }

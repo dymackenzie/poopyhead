@@ -183,26 +183,51 @@
   align-items: flex-start;
 }
 
-/* ── Table Cards (visible + blind) ──────────── */
+/* ── Table Cards (stacked visible + blind) ──── */
 
 .gs-table-zone {
-  display: flex;
-  gap: var(--space-4);
-  justify-content: center;
-  padding: var(--space-2) var(--space-4);
-  flex-shrink: 0;
-}
-
-.gs-table-section {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  flex-shrink: 0;
 }
 
-.gs-table-cards {
+/* Row holding the 3 slots */
+.gs-table-stacks {
   display: flex;
-  gap: var(--space-1);
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+/*
+ * Each slot is a relative container tall enough to show both
+ * the blind card (bottom) and the visible card peeking above it.
+ * sm card height = 68px. Visible card is offset -10px (upward),
+ * so total height = 68px + 10px peek = 78px.
+ */
+.gs-table-slot {
+  position: relative;
+  width: 48px;   /* sm card width */
+  height: 78px;  /* 68px card + 10px peek */
+}
+
+/* Blind card anchored to the bottom of the slot */
+.gs-table-slot__blind {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+/* Visible card floats 10px above the blind card */
+.gs-table-slot__visible {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  box-shadow:
+    0 -2px 6px rgba(0, 0, 0, 0.35),
+    var(--card-shadow);
 }
 
 /* ── Labels ──────────────────────────────────── */
@@ -340,6 +365,11 @@
 
   .gs-table-zone {
     padding: var(--space-1) var(--space-3);
+    gap: var(--space-1);
+  }
+
+  .gs-table-stacks {
+    gap: var(--space-2);
   }
 }
 
@@ -351,4 +381,71 @@
   .gs-center {
     gap: var(--space-7);
   }
+}
+
+/* =============================================
+   Swap Phase
+   ============================================= */
+
+.gs-swap-phase {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-4) var(--space-3);
+  gap: var(--space-4);
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.gs-swap-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.gs-swap-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.gs-swap-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.gs-swap-progress {
+  font-size: 0.8rem;
+  color: var(--accent-muted, #9ca3af);
+  margin: 0;
+}
+
+.gs-swap-cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+.gs-swap-card {
+  cursor: pointer;
+}
+
+.gs-swap-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: auto;
+}
+
+.gs-swap-count {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }

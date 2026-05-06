@@ -1,5 +1,5 @@
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
   /* === Core Palette === */
   --color-black:        #0A0A0A;
@@ -13,33 +13,34 @@
   --color-white:        #FFFFFF;
 
   /* === Accent (max 2 per screen) === */
-  --accent-red:         #FF3B3B;
-  --accent-yellow:      #FFCC00;
-  --accent-green:       #34C759;
+  --accent-red:         #E8332A;
+  --accent-yellow:      #F5A623;
+  --accent-green:       #28A745;
   --accent-purple:      #5856D6;
+  --accent-warm:        #FF6B35;
 
-  /* === Semantic Tokens === */
-  --bg-base:            var(--color-black);
-  --bg-surface:         var(--color-dark);
-  --bg-surface-2:       var(--color-dark-2);
-  --bg-elevated:        var(--color-dark-3);
+  /* === Semantic Tokens — Light Mode === */
+  --bg-base:            #FBF8F3;   /* warm parchment */
+  --bg-surface:         #FFFFFF;
+  --bg-surface-2:       #F5F1EB;   /* soft warm off-white */
+  --bg-elevated:        #EDE8DF;   /* gentle warm gray */
 
-  --text-primary:       var(--color-white);
-  --text-secondary:     var(--color-light-gray);
-  --text-muted:         var(--color-mid-gray);
-  --text-inverse:       var(--color-black);
+  --text-primary:       #0A0A0A;
+  --text-secondary:     #2A2A2A;
+  --text-muted:         #6B6B6B;
+  --text-inverse:       #FFFFFF;
 
-  --border-strong:      rgba(255,255,255,0.12);
-  --border-soft:        rgba(255,255,255,0.06);
-  --border-accent:      rgba(255,255,255,0.24);
+  --border-strong:      rgba(0,0,0,0.15);
+  --border-soft:        rgba(0,0,0,0.07);
+  --border-accent:      rgba(0,0,0,0.30);
 
   /* === Card-specific === */
-  --card-face:          var(--color-off-white);
-  --card-face-2:        var(--color-white);
-  --card-back:          var(--color-near-black);
-  --card-border:        rgba(0,0,0,0.15);
-  --card-shadow:        0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
-  --card-shadow-raised: 0 8px 24px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3);
+  --card-face:          #FFFFFF;
+  --card-face-2:        #F8F5F0;
+  --card-back:          #111111;
+  --card-border:        rgba(0,0,0,0.12);
+  --card-shadow:        0 3px 10px rgba(0,0,0,0.18), 0 1px 3px rgba(0,0,0,0.12);
+  --card-shadow-raised: 0 8px 24px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.14);
   --card-radius:        10px;
 
   /* === State === */
@@ -74,10 +75,10 @@
   --font-2xl:  32px;
   --font-3xl:  42px;
 
-  /* === Shadows === */
-  --shadow-low:  0 2px 8px rgba(0,0,0,0.3);
-  --shadow-mid:  0 6px 18px rgba(0,0,0,0.4);
-  --shadow-high: 0 12px 32px rgba(0,0,0,0.5);
+  /* === Shadows — lighter for light mode === */
+  --shadow-low:  0 2px 8px rgba(0,0,0,0.10);
+  --shadow-mid:  0 6px 18px rgba(0,0,0,0.14);
+  --shadow-high: 0 12px 32px rgba(0,0,0,0.18);
 
   /* === Timing === */
   --timing-instant:   80ms ease-out;
@@ -87,7 +88,7 @@
   --timing-card-draw: 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
   --timing-turn:      250ms ease-in-out;
 
-  /* === Table felt === */
+  /* === Table felt — keep game board green === */
   --felt-bg:    #0D1A0E;
   --felt-line:  rgba(255,255,255,0.04);
 }

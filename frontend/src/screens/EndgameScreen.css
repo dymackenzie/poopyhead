@@ -1,6 +1,26 @@
 /* =============================================
-   Endgame Screen
+   Endgame Screen — Light Mode, Dramatic + Playful
    ============================================= */
+
+@keyframes poopBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  40%       { transform: translateY(-8px) scale(1.1); }
+  60%       { transform: translateY(-4px) scale(1.05); }
+}
+
+@keyframes loserShake {
+  0%, 100% { transform: rotate(0deg); }
+  20%       { transform: rotate(-3deg); }
+  40%       { transform: rotate(3deg); }
+  60%       { transform: rotate(-2deg); }
+  80%       { transform: rotate(2deg); }
+}
+
+@keyframes medalPop {
+  0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
+  70%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
 
 .endgame-screen {
   width: 100%;
@@ -10,70 +30,78 @@
   justify-content: center;
   padding: var(--space-4);
   background: var(--bg-base);
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(232,51,42,0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(245,166,35,0.06) 0%, transparent 50%);
   overflow-y: auto;
 }
 
 .endgame-panel {
   width: 100%;
-  max-width: 420px;
+  max-width: 400px;
   background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
+  border: 2px solid var(--color-black);
   border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: var(--shadow-high);
+  box-shadow: 6px 6px 0 var(--color-black);
 }
 
 /* ── Header ──────────────────────────────────── */
 
 .endgame-header {
   padding: var(--space-6) var(--space-5) var(--space-5);
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 2px solid var(--border-soft);
+  background: var(--bg-surface-2);
+  text-align: center;
 }
 
 .endgame-kicker {
   font-size: var(--font-xs);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.18em;
   color: var(--text-muted);
   margin: 0 0 var(--space-2);
 }
 
 .endgame-title {
-  font-size: clamp(36px, 11vw, 52px);
+  font-size: clamp(38px, 11vw, 52px);
   font-weight: 900;
   letter-spacing: -0.03em;
   line-height: 0.9;
-  color: var(--text-primary);
+  color: var(--color-black);
   margin: 0 0 var(--space-4);
   text-transform: uppercase;
 }
 
+/* Loser badge — the star of the show */
 .endgame-loser-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-elevated);
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-pill);
 }
 
 .endgame-loser-badge--you {
-  background: rgba(255, 59, 59, 0.1);
-  border-color: rgba(255, 59, 59, 0.3);
+  background: rgba(232,51,42,0.07);
+  border-color: var(--accent-red);
+  animation: loserShake 0.6s ease-in-out 0.4s both;
 }
 
 .endgame-loser-crown {
-  font-size: 18px;
-  filter: grayscale(1);
-  opacity: 0.7;
+  font-size: 20px;
+  display: inline-block;
+  animation: poopBounce 2.2s ease-in-out 0.8s infinite;
 }
 
 .endgame-loser-name {
   font-size: var(--font-sm);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-secondary);
+  letter-spacing: 0.01em;
 }
 
 .endgame-loser-badge--you .endgame-loser-name {
@@ -84,14 +112,14 @@
 
 .endgame-standings {
   padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--border-soft);
+  border-bottom: 2px solid var(--border-soft);
 }
 
 .endgame-standings-title {
   font-size: var(--font-xs);
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   color: var(--text-muted);
   margin-bottom: var(--space-3);
 }
@@ -99,37 +127,50 @@
 .endgame-standings-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .endgame-row {
   display: grid;
-  grid-template-columns: 36px 1fr auto;
+  grid-template-columns: 40px 1fr auto;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
-  border: 1px solid transparent;
+  border: 2px solid transparent;
+  background: var(--bg-surface-2);
   transition: background 150ms ease-out;
 }
 
 .endgame-row--me {
-  background: rgba(255,255,255,0.04);
-  border-color: var(--border-strong);
+  background: var(--bg-elevated);
+  border-color: var(--color-black);
 }
 
 .endgame-row--loser {
-  background: rgba(255, 59, 59, 0.06);
-  border-color: rgba(255, 59, 59, 0.15);
+  background: rgba(232,51,42,0.05);
+  border-color: rgba(232,51,42,0.25);
+}
+
+/* First place gets a special treatment */
+.endgame-row:first-child {
+  background: rgba(245,166,35,0.08);
+  border-color: rgba(245,166,35,0.35);
 }
 
 .endgame-row-place {
   font-size: var(--font-xs);
-  font-weight: 800;
+  font-weight: 900;
   color: var(--text-muted);
   text-align: center;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.endgame-row:first-child .endgame-row-place {
+  color: var(--accent-yellow);
+  font-size: 16px;
+  animation: medalPop 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
 }
 
 .endgame-row--loser .endgame-row-place {
@@ -138,7 +179,7 @@
 
 .endgame-row-name {
   font-size: var(--font-sm);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-primary);
   display: flex;
   align-items: center;
@@ -148,25 +189,28 @@
 
 .endgame-you-tag {
   font-size: var(--font-xs);
-  font-weight: 700;
-  color: var(--text-muted);
-  background: rgba(255,255,255,0.08);
+  font-weight: 800;
+  color: var(--color-black);
+  background: var(--bg-elevated);
+  border: 1.5px solid var(--border-strong);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   flex-shrink: 0;
 }
 
 .endgame-row-cards {
   font-size: var(--font-xs);
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .endgame-poop-badge {
-  font-size: 16px;
-  filter: grayscale(0.5);
+  font-size: 18px;
+  display: inline-block;
+  animation: poopBounce 2.2s ease-in-out 1.2s infinite;
 }
 
 /* ── Actions ─────────────────────────────────── */
@@ -188,9 +232,10 @@
 
 .endgame-rematch-title {
   font-size: var(--font-lg);
-  font-weight: 700;
+  font-weight: 800;
   color: var(--text-primary);
   text-align: center;
   padding: 0 var(--space-5) var(--space-7);
   margin: 0;
+  letter-spacing: -0.01em;
 }

@@ -73,10 +73,13 @@ describe('Step 12: Release Validation Gate', () => {
       });
 
       expect(game.players.length).toBe(2);
+      // In swapping phase the hand holds all dealt cards (visible not yet chosen)
       expect(game.players[0].hand.length).toBeGreaterThan(0);
-      expect(game.players[0].tableVisible.length).toBe(3);
+      // tableVisible starts empty — players pick their 3 during swap phase
+      expect(game.players[0].tableVisible.length).toBe(0);
       expect(game.players[0].tableBlind.length).toBe(3);
-      expect(game.status).toBe('playing');
+      // Game starts in swapping phase so players can choose table-visible cards
+      expect(game.status).toBe('swapping');
     });
 
     it('should support hand size rules (4 for multiples of 5, else 5)', () => {
@@ -91,9 +94,10 @@ describe('Step 12: Release Validation Gate', () => {
         direction: 'clockwise',
       });
 
-      // 5-player game: dealt 4 hand cards, 3 moved to tableVisible → 1 in hand
-      expect(game5.players.every(p => p.hand.length === 1)).toBe(true);
-      expect(game5.players.every(p => p.tableVisible.length === 3)).toBe(true);
+      // 5-player game: dealt 4 hand cards; during swap phase all 4 are in hand
+      // (3 will be moved to tableVisible after player submits swap)
+      expect(game5.players.every(p => p.hand.length === 4)).toBe(true);
+      expect(game5.players.every(p => p.tableVisible.length === 0)).toBe(true);
 
       const game6 = createGame({
         lobbyCode: 'L02',
@@ -106,9 +110,9 @@ describe('Step 12: Release Validation Gate', () => {
         direction: 'clockwise',
       });
 
-      // 6-player game: dealt 5 hand cards, 3 moved to tableVisible → 2 in hand
-      expect(game6.players.every(p => p.hand.length === 2)).toBe(true);
-      expect(game6.players.every(p => p.tableVisible.length === 3)).toBe(true);
+      // 6-player game: dealt 5 hand cards; during swap phase all 5 are in hand
+      expect(game6.players.every(p => p.hand.length === 5)).toBe(true);
+      expect(game6.players.every(p => p.tableVisible.length === 0)).toBe(true);
     });
 
     it('should provide playable card hints (client-side)', () => {
@@ -151,6 +155,7 @@ describe('Step 12: Release Validation Gate', () => {
         direction: 'clockwise',
       });
 
+      // Turn order is set up even during swapping phase
       expect(game.currentPlayerIndex).toBeGreaterThanOrEqual(0);
       expect(game.currentPlayerIndex).toBeLessThan(game.players.length);
       expect(game.direction).toBe('clockwise');

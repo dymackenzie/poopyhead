@@ -180,7 +180,8 @@ describe('Step 7: Realtime Multiplayer Core', () => {
         direction: 'clockwise',
       });
       
-      expect(game.status).toBe('playing');
+      // Game starts in swapping phase so players can choose their table-visible cards
+      expect(game.status).toBe('swapping');
       expect(game.players).toHaveLength(2);
       expect(game.players[0].hand.length).toBeGreaterThan(0);
     });
@@ -301,8 +302,9 @@ describe('Step 7: Realtime Multiplayer Core', () => {
         settings: lobby.settings,
         direction: 'clockwise',
       });
-      expect(game.status).toBe('playing');
-      
+      // Game starts in swapping phase so players can choose their table-visible cards
+      expect(game.status).toBe('swapping');
+
       // 5. Verify playable state
       expect(game.currentPlayerIndex).toBeGreaterThanOrEqual(0);
       expect(game.currentPlayerIndex < game.players.length).toBe(true);

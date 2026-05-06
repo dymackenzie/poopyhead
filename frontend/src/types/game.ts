@@ -42,11 +42,15 @@ export interface GameStatePatch {
   blindCards?: GameCard[];
   playPile?: GameCard[];
   currentPlayerUsername?: string;
+  currentTurnPlayerId?: string;
   currentPlayerId?: string;
   lobbyPlayers?: LobbyPlayer[];
   lobbyCode?: string;
   canStartGame?: boolean;
   gameStatus?: 'lobby' | 'playing' | 'ended' | 'rematch';
+  phase?: 'swapping' | 'playing';
+  swappedCount?: number;
+  totalPlayers?: number;
 }
 
 export interface PlayerJoinedPayload {

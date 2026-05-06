@@ -21,7 +21,9 @@ export interface GameInstance {
   currentPlayerIndex: number;
   playOrder: string[];
   direction: 'clockwise' | 'counterclockwise';
-  status: 'setup' | 'playing' | 'ended';
+  status: 'setup' | 'swapping' | 'playing' | 'ended';
+  /** Player IDs that have submitted their swap selection */
+  swappedPlayers: string[];
   createdAt: Date;
   startedAt?: Date;
   endedAt?: Date;
@@ -77,18 +79,21 @@ export function createGame(input: CreateGameInput): GameInstance {
   const playerCount = input.players.length;
   const deck = createDeck(playerCount);
   const dealResult = dealGame(deck, playerCount);
-  
+
   // Determine first player (from DealService logic - using 0 for MVP)
   const firstPlayerIndex = 0;
-  
+
   const gameInstance: GameInstance = {
     id: uuid(),
     lobbyCode: input.lobbyCode,
     players: input.players.map((p, i) => ({
       id: p.id,
       username: p.username,
-      hand: dealResult.playerHands[i] || [],
-      tableVisible: dealResult.playerTableVisible[i] || [],
+      // During swapping phase hand = all dealt hand cards (tableVisible not yet assigned).
+      // dealGame returns playerHands already stripped of the auto-split visible cards, so
+      // we combine them back so the player can choose their own 3.
+      hand: [...(dealResult.playerHands[i] || []), ...(dealResult.playerTableVisible[i] || [])],
+      tableVisible: [], // empty until player submits swap selection
       tableBlind: dealResult.playerTableBlind[i] || [],
       poopyheadCount: p.poopyheadCount,
     })),
@@ -97,9 +102,9 @@ export function createGame(input: CreateGameInput): GameInstance {
     currentPlayerIndex: firstPlayerIndex,
     playOrder: input.players.map(p => p.id),
     direction: input.direction,
-    status: 'playing',
+    status: 'swapping', // players must choose table-visible cards before play begins
+    swappedPlayers: [],
     createdAt: new Date(),
-    startedAt: new Date(),
     activeConstraints: {
       sevenOrUnder: false,
       skipCount: 0,
@@ -109,7 +114,7 @@ export function createGame(input: CreateGameInput): GameInstance {
     turnHistory: [],
     eliminationOrder: [],
   };
-  
+
   return gameInstance;
 }
 
@@ -253,6 +258,79 @@ function drawCardsFromDeck(deck: Card[], count: number): [Card[], Card[]] {
   return [drawn, remaining];
 }
 
+// ────────────────────────────────────────────────────────────────
+// SWAP PHASE
+// ────────────────────────────────────────────────────────────────
+
+export interface ApplySwapInput {
+  game: GameInstance;
+  playerId: string;
+  /** Exactly 3 card IDs from the player's current hand */
+  cardIds: string[];
+}
+
+export interface ApplySwapOutput {
+  success: boolean;
+  reason?: string;
+  updatedGame?: GameInstance;
+  /** True when every player has now submitted — game transitions to 'playing' */
+  allPlayersSwapped?: boolean;
+}
+
+/**
+ * Records a player's table-visible card selection during the swapping phase.
+ * When all players have submitted, the game advances to 'playing'.
+ */
+export function applySwap(input: ApplySwapInput): ApplySwapOutput {
+  const { game, playerId, cardIds } = input;
+
+  if (game.status !== 'swapping') {
+    return { success: false, reason: 'NOT_SWAPPING_PHASE' };
+  }
+
+  const player = game.players.find(p => p.id === playerId);
+  if (!player) {
+    return { success: false, reason: 'PLAYER_NOT_FOUND' };
+  }
+
+  if (game.swappedPlayers.includes(playerId)) {
+    return { success: false, reason: 'ALREADY_SWAPPED' };
+  }
+
+  if (cardIds.length !== 3) {
+    return { success: false, reason: 'MUST_CHOOSE_EXACTLY_3' };
+  }
+
+  // All chosen cards must be in the player's current hand
+  const handIds = new Set(player.hand.map(c => c.id));
+  if (!cardIds.every(id => handIds.has(id))) {
+    return { success: false, reason: 'CARDS_NOT_IN_HAND' };
+  }
+
+  const chosenCards = cardIds.map(id => player.hand.find(c => c.id === id)!);
+  const remainingHand = player.hand.filter(c => !cardIds.includes(c.id));
+
+  const updatedPlayer = {
+    ...player,
+    hand: remainingHand,
+    tableVisible: chosenCards,
+  };
+
+  const updatedSwappedPlayers = [...game.swappedPlayers, playerId];
+  const allPlayersSwapped = updatedSwappedPlayers.length === game.players.length;
+
+  const updatedGame: GameInstance = {
+    ...game,
+    players: game.players.map(p => (p.id === playerId ? updatedPlayer : p)),
+    swappedPlayers: updatedSwappedPlayers,
+    status: allPlayersSwapped ? 'playing' : 'swapping',
+    // Only set startedAt when play actually begins
+    ...(allPlayersSwapped ? { startedAt: new Date() } : {}),
+  };
+
+  return { success: true, updatedGame, allPlayersSwapped };
+}
+
 /**
  * Checks if game has ended.
  */
@@ -284,41 +362,6 @@ export function endGame(game: GameInstance, loserId: string): GameInstance {
  * Prepare for rematch - reset game state for same players.
  */
 export function prepareRematch(input: CreateGameInput): GameInstance {
-  // Update poopyhead count for loser
-  const playerCount = input.players.length;
-  const deck = createDeck(playerCount);
-  const dealResult = dealGame(deck, playerCount);
-
-  const firstPlayerIndex = 0;
-
-  const gameInstance: GameInstance = {
-    id: uuid(),
-    lobbyCode: input.lobbyCode,
-    players: input.players.map((p, i) => ({
-      id: p.id,
-      username: p.username,
-      hand: dealResult.playerHands[i] || [],
-      tableVisible: dealResult.playerTableVisible[i] || [],
-      tableBlind: dealResult.playerTableBlind[i] || [],
-      poopyheadCount: p.poopyheadCount,
-    })),
-    deck: dealResult.remainingDeck,
-    playPile: [],
-    currentPlayerIndex: firstPlayerIndex,
-    playOrder: input.players.map(p => p.id),
-    direction: input.direction,
-    status: 'playing',
-    createdAt: new Date(),
-    startedAt: new Date(),
-    activeConstraints: {
-      sevenOrUnder: false,
-      skipCount: 0,
-    },
-    bombEnabled: input.settings.bombEnabled,
-    turnTimerSeconds: input.settings.turnTimerSeconds,
-    turnHistory: [],
-    eliminationOrder: [],
-  };
-
-  return gameInstance;
+  // Delegate to createGame so the swapping phase is entered consistently.
+  return createGame(input);
 }

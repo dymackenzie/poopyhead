@@ -2,6 +2,7 @@
  * Game Screen
  *
  * Layout (mobile portrait):
+ *   - Swap phase: select 3 cards from hand to place face-up, then confirm
  *   - Opponents zone (top / sides)
  *   - Center board: discard pile + draw deck
  *   - Your table cards (visible + blind)
@@ -11,7 +12,8 @@
 
 import React, { useState } from 'react';
 import { useGameStore } from '../store';
-import { playCards } from '../socketClient';
+import { playCards, swapCards } from '../socketClient';
+import type { GameState } from '../store';
 import Card from '../components/Card';
 import PileDisplay from '../components/PileDisplay';
 import './GameScreen.css';
@@ -24,26 +26,125 @@ function faceDownCount(cardsRemaining: number | undefined): number {
   return Math.min(cardsRemaining ?? 3, 7);
 }
 
+/* ── Swap Phase UI ───────────────────────────── */
+
+interface SwapPhaseProps {
+  hand: GameCard[];
+  gameId: string;
+  currentPlayerId: string;
+  swappedCount: number;
+  totalPlayers: number;
+}
+
+function SwapPhase({ hand, gameId, currentPlayerId, swappedCount, totalPlayers }: SwapPhaseProps): React.ReactElement {
+  const [selected, setSelected] = useState<string[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+
+  const toggleCard = (cardId: string): void => {
+    if (submitted) return;
+    setSelected((prev) => {
+      if (prev.includes(cardId)) return prev.filter((id) => id !== cardId);
+      if (prev.length >= 3) return prev; // max 3
+      return [...prev, cardId];
+    });
+  };
+
+  const handleConfirm = async (): Promise<void> => {
+    if (selected.length !== 3 || submitted) return;
+    setSubmitted(true);
+    await swapCards(gameId, currentPlayerId, selected);
+  };
+
+  const waitingFor = totalPlayers - swappedCount;
+
+  return (
+    <div className="gs-swap-phase">
+      <div className="gs-swap-header">
+        <h2 className="gs-swap-title">Choose Your Table Cards</h2>
+        <p className="gs-swap-subtitle">
+          Select exactly 3 cards to place face-up on the table.
+          These cards will be visible to all players.
+        </p>
+        {totalPlayers > 1 && (
+          <p className="gs-swap-progress">
+            {submitted
+              ? `Waiting for ${waitingFor} other player${waitingFor !== 1 ? 's' : ''}…`
+              : `${swappedCount} / ${totalPlayers} players ready`}
+          </p>
+        )}
+      </div>
+
+      <div className="gs-swap-cards" role="group" aria-label="Select 3 cards for your table">
+        {hand.map((card: GameCard, i: number) => {
+          const isSelected = selected.includes(card.id);
+          const isDisabled = submitted || (!isSelected && selected.length >= 3);
+          return (
+            <Card
+              key={card.id}
+              rank={card.rank}
+              suit={card.suit}
+              size="md"
+              selected={isSelected}
+              disabled={isDisabled}
+              onClick={() => toggleCard(card.id)}
+              className="gs-swap-card animate-slide-up"
+              style={{ animationDelay: `${i * 20}ms` }}
+              aria-label={`${card.rank} of ${card.suit}${isSelected ? ', selected for table' : ''}`}
+            />
+          );
+        })}
+      </div>
+
+      <div className="gs-swap-footer">
+        <span className="gs-swap-count">{selected.length} / 3 selected</span>
+        <button
+          className={`gs-btn gs-btn--primary ${selected.length === 3 ? 'gs-btn--active' : ''}`}
+          onClick={handleConfirm}
+          disabled={selected.length !== 3 || submitted}
+          aria-label="Confirm table card selection"
+        >
+          {submitted ? 'Waiting…' : 'Confirm'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── Main Component ──────────────────────────── */
+
 export function GameScreen(): React.ReactElement {
   const hand              = useGameStore((s) => s.hand);
   const tableCards        = useGameStore((s) => s.tableCards);
   const blindCards        = useGameStore((s) => s.blindCards);
   const playPile          = useGameStore((s) => s.playPile);
-  const playableCards     = useGameStore((s) => s.playableCards);
   const currentPlayerUsername = useGameStore((s) => s.currentPlayerUsername);
+  const currentTurnPlayerId   = useGameStore((s) => s.currentTurnPlayerId);
   const gameId            = useGameStore((s) => s.gameId);
   const currentPlayerId   = useGameStore((s) => s.currentPlayerId);
   const lobbyPlayers      = useGameStore((s) => s.lobbyPlayers);
+  const phase             = useGameStore((s) => s.phase);
+  const swappedCount      = useGameStore((s) => s.swappedCount);
+  const totalPlayers      = useGameStore((s) => s.totalPlayers);
 
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
 
-  const you      = lobbyPlayers.find((p: LobbyPlayer) => p.id === currentPlayerId);
   const opponents = lobbyPlayers.filter((p: LobbyPlayer) => p.id !== currentPlayerId);
   const topPileCard = playPile.length > 0 ? playPile[playPile.length - 1] : null;
-  const isYourTurn = !!you && currentPlayerUsername === you.username;
+  // Use ID comparison — more reliable than matching username strings
+  const isYourTurn = !!currentPlayerId && currentTurnPlayerId === currentPlayerId;
+
+  // Determine which zone is active for card selection
+  const activeZoneIds = new Set<string>(
+    hand.length > 0
+      ? hand.map((c: GameCard) => c.id)
+      : tableCards.length > 0
+        ? tableCards.map((c: GameCard) => c.id)
+        : []
+  );
 
   const handleSelectCard = (cardId: string): void => {
-    if (!playableCards.includes(cardId)) return;
+    // Only allow selecting cards from the active zone
+    if (!activeZoneIds.has(cardId)) return;
     setSelectedCards((prev) =>
       prev.includes(cardId) ? prev.filter((id) => id !== cardId) : [...prev, cardId]
     );
@@ -51,9 +152,35 @@ export function GameScreen(): React.ReactElement {
 
   const handlePlayCards = async (): Promise<void> => {
     if (selectedCards.length === 0 || !gameId || !currentPlayerId) return;
-    await playCards(gameId, currentPlayerId, selectedCards);
+    const result = await playCards(gameId, currentPlayerId, selectedCards) as any;
     setSelectedCards([]);
+    // Update local hand/table zones from server response
+    if (result?.success && result?.game) {
+      const me = result.game.players.find((p: any) => p.id === currentPlayerId);
+      if (me) {
+        useGameStore.getState().updateGameState({
+          hand: me.hand || [],
+          tableCards: me.tableVisible || [],
+          blindCards: me.tableBlind || [],
+        } as Partial<GameState>);
+      }
+    }
   };
+
+  /* ── Swap phase: show simplified selection UI ── */
+  if (phase === 'swapping' && gameId && currentPlayerId) {
+    return (
+      <div className="game-screen">
+        <SwapPhase
+          hand={hand}
+          gameId={gameId}
+          currentPlayerId={currentPlayerId}
+          swappedCount={swappedCount}
+          totalPlayers={totalPlayers}
+        />
+      </div>
+    );
+  }
 
   /* Split opponents for layout: top-row vs side opponents */
   const topOpponents  = opponents.slice(0, 3);
@@ -135,42 +262,39 @@ export function GameScreen(): React.ReactElement {
       </div>
 
       {/* ── Player's Table Cards ─────────────────── */}
-      <div className="gs-table-zone">
-        {tableCards.length > 0 && (
-          <div className="gs-table-section">
-            <div className="gs-zone-label">Table</div>
-            <div className="gs-table-cards">
-              {tableCards.map((card: GameCard, i: number) => (
-                <Card
-                  key={card.id}
-                  rank={card.rank}
-                  suit={card.suit}
-                  size="sm"
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${i * 30}ms` }}
-                />
-              ))}
-            </div>
+      {blindCards.length > 0 && (
+        <div className="gs-table-zone">
+          <div className="gs-zone-label">Table</div>
+          <div className="gs-table-stacks">
+            {blindCards.map((_: GameCard, i: number) => {
+              const visibleCard = tableCards[i] ?? null;
+              return (
+                <div key={i} className="gs-table-slot" aria-label={`Table slot ${i + 1}`}>
+                  {/* Blind card — base of stack */}
+                  <Card
+                    faceDown
+                    size="sm"
+                    className="gs-table-slot__blind animate-slide-up"
+                    style={{ animationDelay: `${i * 30}ms` }}
+                    aria-label="Blind card"
+                  />
+                  {/* Visible card — rests on top of blind */}
+                  {visibleCard && (
+                    <Card
+                      rank={visibleCard.rank}
+                      suit={visibleCard.suit}
+                      size="sm"
+                      className="gs-table-slot__visible animate-slide-up"
+                      style={{ animationDelay: `${i * 30 + 15}ms` }}
+                      aria-label={`${visibleCard.rank} of ${visibleCard.suit}, table card`}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
-        )}
-
-        {blindCards.length > 0 && (
-          <div className="gs-table-section">
-            <div className="gs-zone-label">Blind</div>
-            <div className="gs-table-cards">
-              {blindCards.map((_, i: number) => (
-                <Card
-                  key={i}
-                  faceDown
-                  size="sm"
-                  className="animate-slide-up"
-                  style={{ animationDelay: `${i * 30}ms` }}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Your Hand ────────────────────────────── */}
       <div className="gs-hand-zone">
@@ -183,7 +307,6 @@ export function GameScreen(): React.ReactElement {
             <p className="gs-hand-empty">No cards in hand</p>
           ) : (
             hand.map((card: GameCard, i: number) => {
-              const playable = playableCards.includes(card.id);
               const selected = selectedCards.includes(card.id);
               return (
                 <Card
@@ -192,11 +315,10 @@ export function GameScreen(): React.ReactElement {
                   suit={card.suit}
                   size="md"
                   selected={selected}
-                  disabled={!playable}
                   onClick={() => handleSelectCard(card.id)}
                   className="gs-hand-card animate-slide-up"
                   style={{ animationDelay: `${i * 20}ms` }}
-                  aria-label={`${card.rank} of ${card.suit}${selected ? ', selected' : ''}${!playable ? ', not playable' : ''}`}
+                  aria-label={`${card.rank} of ${card.suit}${selected ? ', selected' : ''}`}
                 />
               );
             })

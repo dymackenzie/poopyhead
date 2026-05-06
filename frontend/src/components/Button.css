@@ -2,6 +2,7 @@
   transition:
     background 120ms ease-out,
     border-color 120ms ease-out,
+    box-shadow 120ms ease-out,
     transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
     opacity 120ms ease-out;
 }
@@ -15,6 +16,6 @@
 }
 
 .ph-button:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline: 2px solid rgba(0, 0, 0, 0.5);
   outline-offset: 2px;
 }

@@ -25,6 +25,7 @@ export function initSocket(callbacks: {
   onPlayerJoined?: (data: PlayerJoinedPayload) => void;
   onPlayerReady?: (data: PlayerReadyPayload) => void;
   onGameEnded?: (data: { loserId: string; loserUsername: string }) => void;
+  onSwapUpdate?: (data: GameStatePatch) => void;
 }): Socket {
   socket = io(SOCKET_URL, {
     reconnection: true,
@@ -61,6 +62,10 @@ export function initSocket(callbacks: {
 
   socket.on('gameEnded', (data: { loserId: string; loserUsername: string }) => {
     callbacks.onGameEnded?.(data);
+  });
+
+  socket.on('swapUpdate', (data: GameStatePatch) => {
+    callbacks.onSwapUpdate?.(data);
   });
 
   socket.on('playerReconnected', (data: PlayerJoinedPayload) => {
@@ -138,6 +143,16 @@ export function startGame(code: string, playerId: string, direction: 'clockwise'
 export function playCards(gameId: string, playerId: string, cardIds: string[]): Promise<unknown> {
   return new Promise((resolve) => {
     emitEvent('playCard', { gameId, playerId, cardIds }, resolve);
+  });
+}
+
+/**
+ * Submit swap card selection (swapping phase).
+ * cardIds must be exactly 3 card IDs from the player's hand.
+ */
+export function swapCards(gameId: string, playerId: string, cardIds: string[]): Promise<unknown> {
+  return new Promise((resolve) => {
+    emitEvent('swapCards', { gameId, playerId, cardIds }, resolve);
   });
 }
 

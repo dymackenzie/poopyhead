@@ -109,6 +109,7 @@ export function LobbyScreen(): React.ReactElement {
             <div className="lobby-code-block">
               <span className="lobby-code-label">Lobby Code</span>
               <span className="lobby-code-value">{currentLobbyCode}</span>
+              <span className="lobby-code-hint">Share this with friends to join</span>
             </div>
           </div>
 
@@ -184,6 +185,9 @@ export function LobbyScreen(): React.ReactElement {
               <p className="lobby-kicker">Multiplayer Card Game</p>
               <h1 className="lobby-title">Poopyhead</h1>
               <p className="lobby-subtitle">Last one holding cards loses. Don't be the Poopyhead.</p>
+            </div>
+            <div className="lobby-suit-divider" aria-hidden="true">
+              <span className="lobby-suit-pips">♠ ♥ ♣ ♦</span>
             </div>
             <div className="lobby-home-actions">
               <Button variant="primary" onClick={() => setMode('create')}>

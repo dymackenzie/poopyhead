@@ -18,16 +18,17 @@
   justify-content: center;
   gap: var(--space-2);
   width: 100%;
-  min-height: 48px;
-  padding: var(--space-3) var(--space-4);
+  min-height: 52px;
+  padding: var(--space-3) var(--space-5);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-strong);
+  border: 2px solid transparent;
   font-size: var(--font-base);
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
   cursor: pointer;
   transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
               background 120ms ease-out,
+              box-shadow 120ms ease-out,
               opacity 120ms ease-out;
   will-change: transform;
   user-select: none;
@@ -35,53 +36,72 @@
 }
 
 .button:active:not(:disabled) {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .button:disabled {
-  opacity: 0.38;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
+/* Primary — bold black ink on white (main CTA) */
 .button-primary {
-  background: var(--color-white);
-  color: var(--color-black);
-  border-color: transparent;
+  background: var(--color-black);
+  color: var(--color-white);
+  border-color: var(--color-black);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.25), 0 1px 4px rgba(0,0,0,0.15);
 }
 
 .button-primary:hover:not(:disabled) {
-  background: var(--color-off-white);
+  background: var(--color-dark);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.3), 0 2px 6px rgba(0,0,0,0.15);
 }
 
+.button-primary:active:not(:disabled) {
+  box-shadow: 0 1px 0 rgba(0,0,0,0.2);
+}
+
+/* Secondary — outlined, no fill */
 .button-secondary {
-  background: transparent;
-  color: var(--text-primary);
-  border-color: var(--border-accent);
+  background: var(--bg-surface);
+  color: var(--color-black);
+  border-color: var(--color-black);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.12);
 }
 
 .button-secondary:hover:not(:disabled) {
-  background: rgba(255,255,255,0.06);
+  background: var(--bg-surface-2);
+  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
 }
 
+.button-secondary:active:not(:disabled) {
+  box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+}
+
+/* Tertiary — ghost */
 .button-tertiary {
   background: transparent;
   color: var(--text-muted);
-  border-color: var(--border-soft);
+  border-color: var(--border-strong);
+  box-shadow: none;
 }
 
 .button-tertiary:hover:not(:disabled) {
   color: var(--text-secondary);
-  background: rgba(255,255,255,0.04);
+  background: var(--bg-elevated);
 }
 
+/* Danger — bold red */
 .button-danger {
   background: var(--accent-red);
   color: var(--color-white);
-  border-color: transparent;
+  border-color: var(--accent-red);
+  box-shadow: 0 3px 0 rgba(232,51,42,0.35);
 }
 
 .button-danger:hover:not(:disabled) {
-  background: #E62E2E;
+  background: #D42A22;
+  box-shadow: 0 4px 0 rgba(232,51,42,0.4);
 }
 
 /* === Shared Input System === */
@@ -89,14 +109,15 @@
 .input {
   width: 100%;
   min-height: 48px;
-  background: var(--bg-surface-2);
+  background: var(--bg-surface);
   color: var(--text-primary);
-  border: 1px solid var(--border-strong);
+  border: 2px solid var(--border-strong);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   font-size: var(--font-base);
-  transition: border-color 150ms ease-out, background 150ms ease-out;
+  transition: border-color 150ms ease-out, background 150ms ease-out, box-shadow 150ms ease-out;
   outline: none;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
 }
 
 .input::placeholder {
@@ -104,20 +125,21 @@
 }
 
 .input:focus {
-  border-color: var(--border-accent);
-  background: var(--bg-elevated);
+  border-color: var(--color-black);
+  background: var(--bg-surface);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.06), 0 0 0 3px rgba(0,0,0,0.08);
 }
 
 /* === Spinner === */
 
 .spinner {
   display: inline-block;
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255,255,255,0.15);
-  border-top: 2px solid var(--text-primary);
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(0,0,0,0.12);
+  border-top: 2.5px solid var(--text-primary);
   border-radius: 50%;
-  animation: spin 800ms linear infinite;
+  animation: spin 700ms linear infinite;
 }
 
 @keyframes spin {

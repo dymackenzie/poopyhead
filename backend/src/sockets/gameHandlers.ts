@@ -24,6 +24,7 @@ import {
   processPlayCardAction,
   checkGameEnd,
   endGame,
+  applySwap,
 } from '../services/GameManager.js';
 import {
   createSession,
@@ -69,6 +70,11 @@ export function setupSocketHandlers(io: Server, ns: PoopyheadNamespace) {
       handleStartGame(socket, data, callback, io, ns);
     });
     
+    // GAME: Swap table-visible cards (swapping phase)
+    socket.on('swapCards', (data, callback) => {
+      handleSwapCards(socket, data, callback, io, ns);
+    });
+
     // GAME: Play cards
     socket.on('playCard', (data, callback) => {
       handlePlayCard(socket, data, callback, io, ns);
@@ -262,13 +268,73 @@ function handleStartGame(
     const updatedLobby = updateLobbyStatus(lobby, 'playing', game.id);
     ns.lobbies.set(data.code, updatedLobby);
     
+    // Derive the current turn player's username so clients can display it
+    const currentTurnPlayer = game.players[game.currentPlayerIndex];
+
     callback({ success: true, game, sessions });
     io.to(`lobby:${data.code}`).emit('gameStarted', {
       game,
       sessions, // Send session tokens to clients
+      currentTurnPlayerId: currentTurnPlayer?.id,
+      currentTurnPlayerUsername: currentTurnPlayer?.username,
     });
     
     console.log(`[Game] ${data.code} started game ${game.id}`);
+  } catch (error) {
+    callback({ success: false, reason: 'ERROR', error: (error as Error).message });
+  }
+}
+
+/**
+ * Handle: Swap table-visible cards (swapping phase)
+ */
+function handleSwapCards(
+  socket: Socket,
+  data: { gameId: string; playerId: string; cardIds: string[] },
+  callback: Function,
+  io: Server,
+  ns: PoopyheadNamespace
+) {
+  try {
+    const game = ns.games.get(data.gameId);
+    if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
+
+    const swapResult = applySwap({
+      game,
+      playerId: data.playerId,
+      cardIds: data.cardIds,
+    });
+
+    if (!swapResult.success) {
+      return callback({ success: false, reason: swapResult.reason });
+    }
+
+    const updatedGame = swapResult.updatedGame!;
+    ns.games.set(data.gameId, updatedGame);
+
+    callback({ success: true });
+
+    // Notify room of swap progress and, when all done, the phase transition
+    const payload: Record<string, unknown> = {
+      playerId: data.playerId,
+      swappedCount: updatedGame.swappedPlayers.length,
+      totalPlayers: updatedGame.players.length,
+      phase: updatedGame.status,
+    };
+
+    if (swapResult.allPlayersSwapped) {
+      // Include full game state so clients can update hand/tableVisible atomically.
+      // Also include who goes first so the turn banner populates immediately.
+      const firstTurnPlayer = updatedGame.players[updatedGame.currentPlayerIndex];
+      payload.game = updatedGame;
+      payload.currentTurnPlayerId = firstTurnPlayer?.id;
+      payload.currentTurnPlayerUsername = firstTurnPlayer?.username;
+    }
+
+    io.to(`lobby:${game.lobbyCode}`).emit('swapUpdate', payload);
+
+    console.log(`[Game] ${data.playerId} swapped cards in ${data.gameId}` +
+      (swapResult.allPlayersSwapped ? ' — all swapped, game starting' : ''));
   } catch (error) {
     callback({ success: false, reason: 'ERROR', error: (error as Error).message });
   }

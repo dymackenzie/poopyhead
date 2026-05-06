@@ -140,7 +140,8 @@ describe('Step 10: Rematch Loop', () => {
         direction: 'clockwise',
       });
 
-      expect(game1.status).toBe('playing');
+      // Games start in swapping phase for table-card selection
+      expect(game1.status).toBe('swapping');
       expect(game1.players).toHaveLength(2);
 
       // End game
@@ -159,7 +160,8 @@ describe('Step 10: Rematch Loop', () => {
         direction: 'clockwise',
       });
 
-      expect(game2.status).toBe('playing');
+      // Rematch also starts in swapping phase
+      expect(game2.status).toBe('swapping');
       expect(game2.id).not.toBe(game1.id); // Different game ID
       expect(game2.players).toHaveLength(2);
       expect(game2.players.map(p => p.username).sort()).toEqual(
@@ -247,7 +249,8 @@ describe('Step 10: Rematch Loop', () => {
         direction: 'clockwise',
       });
 
-      expect(game1.status).toBe('playing');
+      // Games start in swapping phase
+      expect(game1.status).toBe('swapping');
       const loser1 = game1.players[0].id;
 
       // 3. End game
@@ -275,7 +278,8 @@ describe('Step 10: Rematch Loop', () => {
         direction: 'clockwise',
       });
 
-      expect(game2.status).toBe('playing');
+      // Rematch starts in swapping phase
+      expect(game2.status).toBe('swapping');
       expect(game2.id).not.toBe(game1.id);
       expect(game2.players).toHaveLength(2);
     });

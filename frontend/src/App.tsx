@@ -52,22 +52,63 @@ export function App(): React.ReactElement {
           const { currentPlayerId } = useGameStore.getState();
           const me = game.players.find((p: any) => p.id === currentPlayerId);
           const lobbyPlayers = game.players.map((p: any) => ({ id: p.id, username: p.username, ready: true }));
+          const gamePhase: 'swapping' | 'playing' = game.status === 'swapping' ? 'swapping' : 'playing';
 
           updateGameState({
-            gameStatus: 'playing',
+            gameStatus: 'playing', // transition App screen to game view
             gameId: game.id,
             playPile: game.playPile,
             hand: me?.hand || [],
             tableCards: me?.tableVisible || [],
             blindCards: me?.tableBlind || [],
             lobbyPlayers,
+            phase: gamePhase,
+            swappedCount: (game.swappedPlayers ?? []).length,
+            totalPlayers: game.players.length,
+            currentPlayerUsername: dataAny.currentTurnPlayerUsername,
+            currentTurnPlayerId: dataAny.currentTurnPlayerId,
           });
         } else {
           updateGameState({ gameStatus: 'playing', ...data });
         }
       },
+      onSwapUpdate: (data) => {
+        const dataAny = data as any;
+        // Always update swap progress counters
+        const patch: Partial<import('./store').GameState> = {
+          swappedCount: dataAny.swappedCount ?? 0,
+        };
+
+        if (dataAny.phase === 'playing') {
+          // All players have swapped — transition to playing phase
+          patch.phase = 'playing';
+          patch.currentPlayerUsername = dataAny.currentTurnPlayerUsername;
+          patch.currentTurnPlayerId = dataAny.currentTurnPlayerId;
+
+          // If full game state is included, refresh hand/tableCards from it
+          if (dataAny.game) {
+            const game = dataAny.game as any;
+            const { currentPlayerId } = useGameStore.getState();
+            const me = game.players.find((p: any) => p.id === currentPlayerId);
+            patch.hand = me?.hand || [];
+            patch.tableCards = me?.tableVisible || [];
+            patch.blindCards = me?.tableBlind || [];
+            patch.playPile = game.playPile;
+          }
+        }
+
+        useGameStore.setState(patch);
+      },
       onCardPlayed: (data) => {
-        updateGameState(data);
+        const dataAny = data as any;
+        const { lobbyPlayers } = useGameStore.getState();
+        const nextPlayerId: string | undefined = dataAny.nextPlayerId;
+        const nextPlayer = lobbyPlayers.find((p: GamePlayer) => p.id === nextPlayerId);
+        useGameStore.setState({
+          playPile: dataAny.pileState ?? dataAny.playPile ?? [],
+          currentTurnPlayerId: nextPlayerId,
+          currentPlayerUsername: nextPlayer?.username,
+        });
       },
       onGameEnded: (data) => {
         // Mark losers in lobby players and transition to ended screen
