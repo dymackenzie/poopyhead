@@ -169,9 +169,11 @@ export function LobbyScreen(): React.ReactElement {
           <Button variant="primary" onClick={handleSetReady}>
             Ready!
           </Button>
-          <Button variant="primary" onClick={handleStartGame} disabled={lobbyPlayers.length < 2}>
-            Start Game
-          </Button>
+          {currentPlayerId === lobbyPlayers[0]?.id && (
+            <Button variant="primary" onClick={handleStartGame} disabled={lobbyPlayers.length < 2}>
+              Start Game
+            </Button>
+          )}
         </div>
       </div>
     </div>

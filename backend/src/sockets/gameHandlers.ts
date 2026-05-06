@@ -264,10 +264,8 @@ function handleStartGame(
     
     callback({ success: true, game, sessions });
     io.to(`lobby:${data.code}`).emit('gameStarted', {
-      gameId: game.id,
-      currentPlayer: game.players[game.currentPlayerIndex],
-      playPile: game.playPile,
-      sessions: sessions, // Send session tokens to clients
+      game,
+      sessions, // Send session tokens to clients
     });
     
     console.log(`[Game] ${data.code} started game ${game.id}`);

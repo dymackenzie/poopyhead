@@ -16,6 +16,7 @@ export function App(): React.ReactElement {
   const gameStatus = useGameStore((state) => state.gameStatus);
   const connect = useGameStore((state) => state.connect);
   const updateGameState = useGameStore((state) => state.updateGameState);
+  const currentPlayerId = useGameStore((state) => state.currentPlayerId);
 
   useEffect(() => {
     // Initialize socket connection
@@ -45,7 +46,23 @@ export function App(): React.ReactElement {
         }
       },
       onGameStarted: (data) => {
-        updateGameState({ gameStatus: 'playing', ...data });
+        if (data?.game) {
+          const game = data.game as any;
+          const me = game.players.find((p: any) => p.id === currentPlayerId);
+          const lobbyPlayers = game.players.map((p: any) => ({ id: p.id, username: p.username, ready: true }));
+
+          updateGameState({
+            gameStatus: 'playing',
+            gameId: game.id,
+            playPile: game.playPile,
+            hand: me?.hand || [],
+            tableCards: me?.tableVisible || [],
+            blindCards: me?.tableBlind || [],
+            lobbyPlayers,
+          });
+        } else {
+          updateGameState({ gameStatus: 'playing', ...data });
+        }
       },
       onCardPlayed: (data) => {
         updateGameState(data);
