@@ -1,189 +1,354 @@
-/* Game Screen Styles */
+/* =============================================
+   Game Screen — Mobile-first felt table
+   ============================================= */
 
 .game-screen {
   width: 100%;
-  min-height: 100vh;
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  color: var(--text-primary);
-  background-image: 
-    radial-gradient(ellipse at 20% 10%, rgba(255,255,255,0.02), transparent 12%),
-    radial-gradient(ellipse at 80% 90%, rgba(0,0,0,0.02), transparent 18%),
-    linear-gradient(180deg, #d64646 0%, #a71b1b 100%);
-  background-size: cover;
-  background-repeat: no-repeat;
+  background: var(--felt-bg);
+  position: relative;
 }
 
-.game-header {
-  padding: var(--space-3) var(--space-4);
-  display: grid;
-  gap: var(--space-3);
-  background: rgba(255,255,255,0.98);
-  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
-  border-radius: 12px;
-  margin: var(--space-3);
+/* Subtle felt texture via radial gradients */
+.game-screen::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 40% at 50% 40%, rgba(255,255,255,0.025) 0%, transparent 70%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,0.012) 3px,
+      rgba(255,255,255,0.012) 4px
+    );
+  pointer-events: none;
+  z-index: 0;
 }
 
-.turn-pill {
-  display: inline-flex;
-  justify-self: center;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  padding: var(--space-2) var(--space-4);
-  font-size: var(--font-sm);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--text-secondary);
+.game-screen > * {
+  position: relative;
+  z-index: 1;
 }
 
-.turn-pill.is-active {
-  background: #ffffff;
-  color: #000000;
-  border-color: #ffffff;
-}
+/* ── Turn Banner ─────────────────────────────── */
 
-.player-rail {
+.gs-turn-banner {
   display: flex;
-  gap: var(--space-2);
-  overflow-x: auto;
-  padding-bottom: var(--space-1);
-}
-
-.opponent-chip {
-  min-width: 130px;
-  background: var(--bg-surface);
-}
-
-.opponent-chip .player-name {
-  font-size: var(--font-base);
-}
-
-.opponent-chip .player-meta {
-  font-size: var(--font-sm);
-  color: var(--text-muted);
-}
-
-.game-board {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
   align-items: center;
-  padding: var(--space-4);
-  gap: var(--space-5);
-}
-
-.table-area {
-  text-align: center;
-  width: 100%;
-  max-width: 320px;
-}
-
-.table-title {
-  font-size: var(--font-sm);
-  color: var(--text-muted);
-  margin-bottom: var(--space-2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.table-cards {
-  display: flex;
   justify-content: center;
   gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(0,0,0,0.5);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--felt-line);
+  min-height: 38px;
+  flex-shrink: 0;
+}
+
+.gs-turn-label {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.5);
+}
+
+.gs-turn-banner--you .gs-turn-label {
+  color: var(--accent-yellow);
+}
+
+.gs-turn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+  animation: glowPulse 1.4s ease-in-out infinite;
+}
+
+/* ── Opponents Top Row ───────────────────────── */
+
+.gs-opponents-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  flex-shrink: 0;
   flex-wrap: wrap;
 }
 
-.pile-card {
-  width: 58px;
-  height: 82px;
+.gs-opponent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gs-opponent--active .gs-opponent-label {
+  background: rgba(255, 204, 0, 0.1);
+  border-color: rgba(255, 204, 0, 0.4);
+}
+
+.gs-opponent-cards {
+  display: flex;
+  position: relative;
+  height: 54px;
+  min-width: 60px;
+}
+
+.gs-opponent-card {
+  position: absolute;
   cursor: default;
-  box-shadow: var(--shadow-mid);
 }
 
-.table-card {
-  background: var(--bg-surface-2);
+.gs-opponent-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px var(--space-2);
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: var(--radius-pill);
+  max-width: 90px;
 }
 
-.hand-area {
+.gs-opponent-label--active {
+  border-color: rgba(255, 204, 0, 0.5);
+}
+
+.gs-active-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+  flex-shrink: 0;
+  animation: glowPulse 1.4s ease-in-out infinite;
+}
+
+.gs-opponent-name {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 56px;
+}
+
+.gs-opponent-count {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  flex-shrink: 0;
+}
+
+/* ── Side opponents (5-6 player) ─────────────── */
+
+.gs-side-opponents {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 var(--space-3);
+  flex-shrink: 0;
+}
+
+.gs-side-opponent {
+  display: flex;
+  gap: var(--space-1);
+  padding: 3px var(--space-2);
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-pill);
+  align-items: center;
+}
+
+/* ── Center Board ────────────────────────────── */
+
+.gs-board {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--space-4);
-  background: rgba(255,255,255,0.95);
-  box-shadow: 0 -6px 18px rgba(0,0,0,0.06);
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  min-height: 0;
 }
 
-.hand-title {
-  font-size: var(--font-sm);
-  color: var(--text-muted);
-  margin-bottom: var(--space-2);
+.gs-center {
+  display: flex;
+  gap: var(--space-6);
+  align-items: flex-start;
+}
+
+/* ── Table Cards (visible + blind) ──────────── */
+
+.gs-table-zone {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: center;
+  padding: var(--space-2) var(--space-4);
+  flex-shrink: 0;
+}
+
+.gs-table-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gs-table-cards {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* ── Labels ──────────────────────────────────── */
+
+.gs-zone-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.35);
 }
 
-.hand-cards {
+/* ── Hand Zone ───────────────────────────────── */
+
+.gs-hand-zone {
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,0.07);
+  padding: var(--space-3) var(--space-4) var(--space-2);
+  flex-shrink: 0;
+}
+
+.gs-hand-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.gs-hand-count {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: rgba(255,255,255,0.3);
+}
+
+.gs-hand-cards {
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
-  overflow-y: hidden;
+  overflow-y: visible;
+  padding-bottom: var(--space-2);
+  padding-top: var(--space-2);
+  -webkit-overflow-scrolling: touch;
   scroll-snap-type: x mandatory;
-  padding-bottom: var(--space-1);
+  scrollbar-width: none;
 }
 
-.hand-card {
-  flex: 0 0 auto;
+.gs-hand-cards::-webkit-scrollbar {
+  display: none;
+}
+
+.gs-hand-card {
+  flex-shrink: 0;
   scroll-snap-align: start;
 }
 
-.controls {
-  padding: var(--space-3) var(--space-4) var(--space-4);
+.gs-hand-empty {
+  font-size: var(--font-sm);
+  color: rgba(255,255,255,0.25);
+  margin: 0;
+  padding: var(--space-3) 0;
+}
+
+/* ── Controls ────────────────────────────────── */
+
+.gs-controls {
   display: flex;
   gap: var(--space-2);
-  justify-content: center;
-  background: rgba(255,255,255,0.95);
+  padding: var(--space-3) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  flex-shrink: 0;
 }
 
-.controls .button {
+.gs-btn {
   flex: 1;
+  min-height: 48px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-base);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 120ms ease-out,
+              background 120ms ease-out;
+  will-change: transform;
+  border: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-@media (max-width: 600px) {
-  .game-board {
-    gap: var(--space-4);
-    padding: var(--space-3);
+.gs-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.gs-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.gs-btn--primary {
+  background: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.5);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.gs-btn--primary.gs-btn--active {
+  background: var(--color-white);
+  color: var(--color-black);
+  border-color: transparent;
+}
+
+.gs-btn--primary.gs-btn--active:hover {
+  background: var(--color-off-white);
+}
+
+.gs-btn--secondary {
+  background: transparent;
+  color: rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,0.08);
+  flex: 0 0 96px;
+}
+
+/* ── Responsive tweaks ───────────────────────── */
+
+@media (max-height: 680px) {
+  .gs-opponents-row {
+    padding: var(--space-2) var(--space-3) var(--space-1);
   }
 
-  .table-area {
-    max-width: 280px;
+  .gs-board {
+    padding: var(--space-2);
   }
 
-  .hand-card,
-  .table-card {
-    width: 46px;
-    height: 68px;
-  }
-
-  .pile-card {
-    width: 54px;
-    height: 76px;
+  .gs-table-zone {
+    padding: var(--space-1) var(--space-3);
   }
 }
 
-@media (min-width: 768px) {
-  .game-board {
-    padding: var(--space-5);
+@media (min-width: 480px) {
+  .gs-hand-card {
+    /* Slightly larger on wider phones */
   }
 
-  .hand-card,
-  .table-card {
-    width: 60px;
-    height: 92px;
-  }
-
-  .pile-card {
-    width: 66px;
-    height: 102px;
+  .gs-center {
+    gap: var(--space-7);
   }
 }

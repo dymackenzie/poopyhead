@@ -1,75 +1,102 @@
-/* Main App Styles */
-
-#root {
-  min-height: 100vh;
-}
+/* App Shell */
 
 .app {
-  min-height: 100vh;
-  display: flex;
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--bg-base);
   color: var(--text-primary);
 }
 
-/* Common Components */
+/* === Shared Button System === */
 
 .button {
-  width: 100%;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--font-base);
-  font-weight: 600;
-  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  font-size: var(--font-base);
+  font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  transition: background var(--timing-fast), border-color var(--timing-fast), transform var(--timing-fast);
-}
-
-.button:hover:not(:disabled) {
-  background: var(--bg-muted);
+  transition: transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 120ms ease-out,
+              opacity 120ms ease-out;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .button:active:not(:disabled) {
-  transform: translateY(1px);
+  transform: scale(0.97);
 }
 
 .button:disabled {
-  background: #141414;
-  border-color: #2d2d2d;
-  color: var(--state-inactive);
+  opacity: 0.38;
   cursor: not-allowed;
 }
 
 .button-primary {
-  background: #ffffff;
-  color: #000000;
+  background: var(--color-white);
+  color: var(--color-black);
+  border-color: transparent;
 }
 
 .button-primary:hover:not(:disabled) {
-  background: #dedede;
+  background: var(--color-off-white);
 }
 
 .button-secondary {
-  background: var(--bg-surface);
-  color: var(--text-secondary);
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-accent);
 }
+
+.button-secondary:hover:not(:disabled) {
+  background: rgba(255,255,255,0.06);
+}
+
+.button-tertiary {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-soft);
+}
+
+.button-tertiary:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.04);
+}
+
+.button-danger {
+  background: var(--accent-red);
+  color: var(--color-white);
+  border-color: transparent;
+}
+
+.button-danger:hover:not(:disabled) {
+  background: #E62E2E;
+}
+
+/* === Shared Input System === */
 
 .input {
   width: 100%;
   min-height: 48px;
-  background: var(--bg-surface);
+  background: var(--bg-surface-2);
   color: var(--text-primary);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-sm);
-  padding: var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
   font-size: var(--font-base);
-  transition: border-color var(--timing-fast), background var(--timing-fast);
+  transition: border-color 150ms ease-out, background 150ms ease-out;
+  outline: none;
 }
 
 .input::placeholder {
@@ -77,24 +104,23 @@
 }
 
 .input:focus {
-  outline: none;
-  border-color: var(--text-primary);
-  background: var(--bg-surface-2);
+  border-color: var(--border-accent);
+  background: var(--bg-elevated);
 }
 
-/* Loading & Spinners */
+/* === Spinner === */
 
 .spinner {
   display: inline-block;
   width: 20px;
   height: 20px;
-  border: 2px solid #e9e9e9;
-  border-top: 2px solid #a71b1b;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top: 2px solid var(--text-primary);
   border-radius: 50%;
-  animation: spin 900ms linear infinite;
+  animation: spin 800ms linear infinite;
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }

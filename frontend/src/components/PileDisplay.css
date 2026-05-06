@@ -1,36 +1,84 @@
-.pile-area {
-  text-align: center;
-  width: 100%;
-  max-width: 320px;
-}
-
-.pile-title {
-  font-size: var(--font-sm);
-  color: var(--text-muted);
-  margin-bottom: var(--space-2);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.pile-display {
-  min-height: 92px;
-  background: rgba(255,255,255,0.94);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
+.ph-pile {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  padding: var(--space-3);
-  box-shadow: var(--shadow-low);
+  gap: var(--space-2);
 }
 
-.pile-empty {
-  font-size: var(--font-sm);
-  color: var(--text-muted);
+.ph-pile-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.45);
 }
 
-.pile-count {
-  margin-top: var(--space-2);
-  color: var(--text-muted);
-  font-size: var(--font-sm);
+.ph-pile-slot {
+  position: relative;
+  width: 58px;
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ph-pile-empty {
+  width: 58px;
+  height: 82px;
+  border-radius: var(--card-radius);
+  border: 1.5px dashed rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-xs);
+  color: rgba(255,255,255,0.25);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ph-pile-count {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.05em;
+}
+
+.ph-pile-top-card {
+  cursor: default;
+}
+
+/* === Deck Stack === */
+
+.ph-pile-deck-stack {
+  position: relative;
+  width: 58px;
+  height: 82px;
+}
+
+.ph-pile-deck-card {
+  position: absolute;
+  width: 58px;
+  height: 82px;
+  border-radius: var(--card-radius);
+  background: var(--card-back);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: var(--card-shadow);
+}
+
+.ph-pile-deck-card--3 {
+  top: -4px;
+  left: 4px;
+  opacity: 0.5;
+}
+
+.ph-pile-deck-card--2 {
+  top: -2px;
+  left: 2px;
+  opacity: 0.75;
+}
+
+.ph-pile-deck-card--top {
+  position: absolute;
+  top: 0;
+  left: 0;
 }

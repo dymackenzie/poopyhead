@@ -1,14 +1,20 @@
 .ph-button {
-  transition: background var(--timing-fast), border-color var(--timing-fast), transform var(--timing-fast);
+  transition:
+    background 120ms ease-out,
+    border-color 120ms ease-out,
+    transform 120ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 120ms ease-out;
 }
 
-.ph-button.button-tertiary {
-  background: transparent;
-  color: var(--text-muted);
-  border-color: var(--border-soft);
+.ph-button.button--auto {
+  width: auto;
+}
+
+.ph-button.button--full {
+  width: 100%;
 }
 
 .ph-button:focus-visible {
-  outline: 2px solid #ffffff;
-  outline-offset: 1px;
+  outline: 2px solid rgba(255, 255, 255, 0.6);
+  outline-offset: 2px;
 }

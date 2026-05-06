@@ -1,42 +1,93 @@
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  --bg-base: #f5f5f4;
-  --bg-surface: #ffffff;
-  --bg-surface-2: #fbfbfb;
-  --bg-muted: #f0efee;
+  /* === Core Palette === */
+  --color-black:        #0A0A0A;
+  --color-near-black:   #111111;
+  --color-dark:         #1A1A1A;
+  --color-dark-2:       #222222;
+  --color-dark-3:       #2A2A2A;
+  --color-mid-gray:     #6B6B6B;
+  --color-light-gray:   #D4D4D4;
+  --color-off-white:    #F2F2F2;
+  --color-white:        #FFFFFF;
 
-  --text-primary: #111111;
-  --text-secondary: #4a4a4a;
-  --text-muted: #7a7a7a;
+  /* === Accent (max 2 per screen) === */
+  --accent-red:         #FF3B3B;
+  --accent-yellow:      #FFCC00;
+  --accent-green:       #34C759;
+  --accent-purple:      #5856D6;
 
-  --border-strong: #e6e6e6;
-  --border-soft: #efefef;
+  /* === Semantic Tokens === */
+  --bg-base:            var(--color-black);
+  --bg-surface:         var(--color-dark);
+  --bg-surface-2:       var(--color-dark-2);
+  --bg-elevated:        var(--color-dark-3);
 
-  --state-success: #0a8f3a;
-  --state-danger: #cc2b2b;
-  --state-inactive: #9b9b9b;
+  --text-primary:       var(--color-white);
+  --text-secondary:     var(--color-light-gray);
+  --text-muted:         var(--color-mid-gray);
+  --text-inverse:       var(--color-black);
 
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
-  --space-6: 32px;
+  --border-strong:      rgba(255,255,255,0.12);
+  --border-soft:        rgba(255,255,255,0.06);
+  --border-accent:      rgba(255,255,255,0.24);
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
+  /* === Card-specific === */
+  --card-face:          var(--color-off-white);
+  --card-face-2:        var(--color-white);
+  --card-back:          var(--color-near-black);
+  --card-border:        rgba(0,0,0,0.15);
+  --card-shadow:        0 4px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+  --card-shadow-raised: 0 8px 24px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.3);
+  --card-radius:        10px;
 
-  --font-sm: 12px;
-  --font-base: 14px;
-  --font-lg: 18px;
-  --font-xl: 24px;
+  /* === State === */
+  --state-success:      var(--accent-green);
+  --state-danger:       var(--accent-red);
+  --state-inactive:     var(--color-mid-gray);
+  --state-active:       var(--accent-yellow);
 
-  --shadow-low: 0 6px 12px rgba(0,0,0,0.06);
-  --shadow-mid: 0 8px 18px rgba(0,0,0,0.08);
+  /* === Spacing (8px grid) === */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  40px;
+  --space-8:  48px;
 
-  --timing-fast: 100ms ease-out;
-  --timing-card-play: 200ms ease-out;
-  --timing-card-draw: 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  --timing-turn: 250ms ease-in-out;
+  /* === Border Radius === */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* === Typography === */
+  --font-xs:   11px;
+  --font-sm:   13px;
+  --font-base: 15px;
+  --font-lg:   18px;
+  --font-xl:   24px;
+  --font-2xl:  32px;
+  --font-3xl:  42px;
+
+  /* === Shadows === */
+  --shadow-low:  0 2px 8px rgba(0,0,0,0.3);
+  --shadow-mid:  0 6px 18px rgba(0,0,0,0.4);
+  --shadow-high: 0 12px 32px rgba(0,0,0,0.5);
+
+  /* === Timing === */
+  --timing-instant:   80ms ease-out;
+  --timing-fast:      150ms ease-out;
+  --timing-mid:       250ms ease-in-out;
+  --timing-card-play: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --timing-card-draw: 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --timing-turn:      250ms ease-in-out;
+
+  /* === Table felt === */
+  --felt-bg:    #0D1A0E;
+  --felt-line:  rgba(255,255,255,0.04);
 }

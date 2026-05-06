@@ -1,95 +1,196 @@
-/* Endgame Screen Styles */
+/* =============================================
+   Endgame Screen
+   ============================================= */
 
 .endgame-screen {
   width: 100%;
-  padding: var(--space-4);
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
+  padding: var(--space-4);
   background: var(--bg-base);
+  overflow-y: auto;
 }
 
-.endgame-card {
+.endgame-panel {
   width: 100%;
-  max-width: 520px;
+  max-width: 420px;
   background: var(--bg-surface);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
-  padding: var(--space-6) var(--space-4);
-  box-shadow: var(--shadow-low);
-  text-align: left;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-high);
 }
 
-.endgame-card h1 {
-  font-size: clamp(34px, 10vw, 48px);
-  margin-bottom: var(--space-3);
-  color: var(--text-primary);
-}
+/* ── Header ──────────────────────────────────── */
 
-.endgame-card h2 {
-  font-size: clamp(24px, 8vw, 32px);
-  margin-bottom: var(--space-4);
-  color: var(--text-primary);
+.endgame-header {
+  padding: var(--space-6) var(--space-5) var(--space-5);
+  border-bottom: 1px solid var(--border-soft);
 }
 
 .endgame-kicker {
-  font-size: var(--font-sm);
+  font-size: var(--font-xs);
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   color: var(--text-muted);
   margin: 0 0 var(--space-2);
 }
 
-.loser-text {
-  font-size: var(--font-base);
-  color: var(--text-secondary);
-  margin: var(--space-3) 0 var(--space-4);
+.endgame-title {
+  font-size: clamp(36px, 11vw, 52px);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 0.9;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-4);
+  text-transform: uppercase;
 }
 
-.standings {
-  border: 1px solid var(--border-soft);
+.endgame-loser-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
+}
+
+.endgame-loser-badge--you {
+  background: rgba(255, 59, 59, 0.1);
+  border-color: rgba(255, 59, 59, 0.3);
+}
+
+.endgame-loser-crown {
+  font-size: 18px;
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+
+.endgame-loser-name {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.endgame-loser-badge--you .endgame-loser-name {
+  color: var(--accent-red);
+}
+
+/* ── Standings ───────────────────────────────── */
+
+.endgame-standings {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.endgame-standings-title {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.endgame-standings-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.endgame-row {
+  display: grid;
+  grid-template-columns: 36px 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  transition: background 150ms ease-out;
+}
+
+.endgame-row--me {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--border-strong);
+}
+
+.endgame-row--loser {
+  background: rgba(255, 59, 59, 0.06);
+  border-color: rgba(255, 59, 59, 0.15);
+}
+
+.endgame-row-place {
+  font-size: var(--font-xs);
+  font-weight: 800;
+  color: var(--text-muted);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.endgame-row--loser .endgame-row-place {
+  color: var(--accent-red);
+}
+
+.endgame-row-name {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   overflow: hidden;
 }
 
-.standings-header,
-.standings-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-}
-
-.standings-header {
-  background: #171717;
+.endgame-you-tag {
+  font-size: var(--font-xs);
+  font-weight: 700;
   color: var(--text-muted);
-  font-size: var(--font-sm);
+  background: rgba(255,255,255,0.08);
+  padding: 1px 5px;
+  border-radius: 3px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
 }
 
-.standings-row {
-  border-top: 1px solid var(--border-soft);
+.endgame-row-cards {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-muted);
 }
 
-.standings-row:nth-child(odd) {
-  background: #101010;
+.endgame-poop-badge {
+  font-size: 16px;
+  filter: grayscale(0.5);
 }
 
-.button-group {
+/* ── Actions ─────────────────────────────────── */
+
+.endgame-actions {
+  padding: var(--space-4) var(--space-5) var(--space-5);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-5);
+  gap: var(--space-3);
 }
 
-@media (min-width: 400px) {
-  .button-group {
-    flex-direction: row;
-  }
-  
-  .button-group .button {
-    flex: 1;
-  }
+/* ── Rematch loading ─────────────────────────── */
+
+.endgame-spinner-wrap {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-7) 0 var(--space-4);
+}
+
+.endgame-rematch-title {
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+  padding: 0 var(--space-5) var(--space-7);
+  margin: 0;
 }

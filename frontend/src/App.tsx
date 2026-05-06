@@ -46,8 +46,9 @@ export function App(): React.ReactElement {
         }
       },
       onGameStarted: (data) => {
-        if (data?.game) {
-          const game = data.game as any;
+        const dataAny = data as any;
+        if (dataAny?.game) {
+          const game = dataAny.game as any;
           const me = game.players.find((p: any) => p.id === currentPlayerId);
           const lobbyPlayers = game.players.map((p: any) => ({ id: p.id, username: p.username, ready: true }));
 

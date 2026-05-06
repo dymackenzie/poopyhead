@@ -11,6 +11,7 @@ interface InputProps {
   maxLength?: number;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   codeStyle?: boolean;
+  autoFocus?: boolean;
 }
 
 export function Input({
@@ -23,23 +24,25 @@ export function Input({
   maxLength,
   autoCapitalize,
   codeStyle = false,
+  autoFocus = false,
 }: InputProps): React.ReactElement {
   return (
     <div className="ph-input-wrap">
       {label && (
-        <label className="field-label ph-input-label" htmlFor={id}>
+        <label className="ph-input-label" htmlFor={id}>
           {label}
         </label>
       )}
       <input
         id={id}
-        className={`input ph-input ${codeStyle ? 'is-code' : ''}`.trim()}
+        className={['input', 'ph-input', codeStyle ? 'ph-input--code' : ''].filter(Boolean).join(' ')}
         type={type}
         value={value}
         placeholder={placeholder}
         maxLength={maxLength}
         autoCapitalize={autoCapitalize}
-        onChange={(event) => onChange(event.target.value)}
+        autoFocus={autoFocus}
+        onChange={(e) => onChange(e.target.value)}
       />
     </div>
   );

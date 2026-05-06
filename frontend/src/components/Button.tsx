@@ -1,7 +1,7 @@
 import React from 'react';
 import './Button.css';
 
-type ButtonVariant = 'primary' | 'secondary' | 'tertiary';
+type ButtonVariant = 'primary' | 'secondary' | 'tertiary' | 'danger';
 
 interface ButtonProps {
   children: React.ReactNode;
@@ -10,6 +10,7 @@ interface ButtonProps {
   type?: 'button' | 'submit' | 'reset';
   variant?: ButtonVariant;
   className?: string;
+  fullWidth?: boolean;
 }
 
 export function Button({
@@ -19,11 +20,18 @@ export function Button({
   type = 'button',
   variant = 'primary',
   className = '',
+  fullWidth = true,
 }: ButtonProps): React.ReactElement {
   return (
     <button
       type={type}
-      className={`button ph-button button-${variant} ${className}`.trim()}
+      className={[
+        'button',
+        'ph-button',
+        `button-${variant}`,
+        fullWidth ? 'button--full' : 'button--auto',
+        className,
+      ].filter(Boolean).join(' ')}
       onClick={onClick}
       disabled={disabled}
     >
