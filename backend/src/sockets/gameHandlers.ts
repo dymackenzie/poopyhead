@@ -334,15 +334,20 @@ function handlePlayCard(
 function handleDisconnect(socket: Socket, io: Server, ns: PoopyheadNamespace) {
   try {
     const playerId = ns.socketToPlayer.get(socket.id);
-    
+
     if (playerId) {
       ns.playerToSocket.delete(playerId);
       ns.socketToPlayer.delete(socket.id);
-      
+
       console.log(`[Socket] ${playerId} disconnected`);
-      
-      // Notify lobby/game of disconnection
-      io.emit('playerDisconnected', { playerId });
+
+      // Notify only the rooms this socket was in (lobby and/or game)
+      // socket.rooms still contains the rooms at disconnect time
+      for (const room of socket.rooms) {
+        if (room !== socket.id) {
+          io.to(room).emit('playerDisconnected', { playerId });
+        }
+      }
     }
   } catch (error) {
     console.error('[Socket] Disconnect error:', error);

@@ -24,6 +24,7 @@ export function initSocket(callbacks: {
   onCardPlayed?: (data: GameStatePatch) => void;
   onPlayerJoined?: (data: PlayerJoinedPayload) => void;
   onPlayerReady?: (data: PlayerReadyPayload) => void;
+  onGameEnded?: (data: { loserId: string; loserUsername: string }) => void;
 }): Socket {
   socket = io(SOCKET_URL, {
     reconnection: true,
@@ -56,6 +57,10 @@ export function initSocket(callbacks: {
 
   socket.on('cardPlayed', (data: GameStatePatch) => {
     callbacks.onCardPlayed?.(data);
+  });
+
+  socket.on('gameEnded', (data: { loserId: string; loserUsername: string }) => {
+    callbacks.onGameEnded?.(data);
   });
 
   socket.on('playerReconnected', (data: PlayerJoinedPayload) => {

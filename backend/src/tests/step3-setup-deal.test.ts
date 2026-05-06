@@ -126,54 +126,60 @@ describe('Step 3: Setup and Deal Logic', () => {
     it('should deal correct cards for 2-player game (5-card hand)', () => {
       const deck = createDeck(2);
       const result = dealGame(deck, 2);
-      
-      // Each player should have: 5-card hand + 3 blind + 3 visible
-      // But 3 visible are removed from hand and replaced
-      // So final hand = 5 cards (after replacement)
+
+      // Each player is dealt 5 hand cards; the first 3 become their face-up table
+      // cards and are removed from the hand.  Final hand = 5 - 3 = 2 cards.
       expect(result.playerHands.length).toBe(2);
-      expect(result.playerHands[0].length).toBe(5);
-      expect(result.playerHands[1].length).toBe(5);
-      
+      expect(result.playerHands[0].length).toBe(2);
+      expect(result.playerHands[1].length).toBe(2);
+
       expect(result.playerTableVisible.length).toBe(2);
       expect(result.playerTableVisible[0].length).toBe(3);
       expect(result.playerTableVisible[1].length).toBe(3);
-      
+
       expect(result.playerTableBlind.length).toBe(2);
       expect(result.playerTableBlind[0].length).toBe(3);
       expect(result.playerTableBlind[1].length).toBe(3);
-      
-      // Deck should have: 52 - (2 players * (5 hand + 3 blind + 3 visible - 3 replacement))
-      // = 52 - (2 * (5 + 3 + 3 - 3)) = 52 - 16 = 36
+
+      // Cards consumed per player: 5 hand + 3 blind = 8.  2 players = 16 total.
+      // Remaining: 52 - 16 = 36.  Hand and tableVisible share no card IDs.
       expect(result.remainingDeck.length).toBe(36);
       expect(result.handSize).toBe(5);
+
+      // Verify no card ID appears in both hand and tableVisible for any player
+      for (let i = 0; i < 2; i++) {
+        const handIds = new Set(result.playerHands[i].map(c => c.id));
+        const visibleIds = result.playerTableVisible[i].map(c => c.id);
+        expect(visibleIds.every(id => !handIds.has(id))).toBe(true);
+      }
     });
     
     it('should deal correct cards for 5-player game (4-card hand)', () => {
       const deck = createDeck(5);
       const result = dealGame(deck, 5);
-      
+
       expect(result.playerHands.length).toBe(5);
-      expect(result.playerHands.every(h => h.length === 4)).toBe(true);
+      // 4 dealt - 3 moved to tableVisible = 1 remaining in hand
+      expect(result.playerHands.every(h => h.length === 1)).toBe(true);
       expect(result.handSize).toBe(4);
-      
-      // Each player: 4 hand + 3 blind + 3 visible - 3 replacement = 7 cards used
-      // Total: 5 * 7 = 35 cards
+
+      // Cards consumed per player: 4 hand + 3 blind = 7.  5 players = 35 total.
       // Remaining: 52 - 35 = 17
       expect(result.remainingDeck.length).toBe(17);
     });
-    
+
     it('should deal correct cards for 10-player game (2 decks, 4-card hand)', () => {
       const deck = createDeck(10);
       expect(deck.length).toBe(104);
-      
+
       const result = dealGame(deck, 10);
-      
+
       expect(result.playerHands.length).toBe(10);
-      expect(result.playerHands.every(h => h.length === 4)).toBe(true);
+      // 4 dealt - 3 moved to tableVisible = 1 remaining in hand
+      expect(result.playerHands.every(h => h.length === 1)).toBe(true);
       expect(result.handSize).toBe(4);
-      
-      // Each player: 4 hand + 3 blind = 7 cards used during setup
-      // Total: 10 * 7 = 70 cards
+
+      // Cards consumed per player: 4 hand + 3 blind = 7.  10 players = 70 total.
       // Remaining: 104 - 70 = 34
       expect(result.remainingDeck.length).toBe(34);
     });

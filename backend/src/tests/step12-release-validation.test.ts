@@ -91,7 +91,9 @@ describe('Step 12: Release Validation Gate', () => {
         direction: 'clockwise',
       });
 
-      expect(game5.players.every(p => p.hand.length === 4)).toBe(true);
+      // 5-player game: dealt 4 hand cards, 3 moved to tableVisible → 1 in hand
+      expect(game5.players.every(p => p.hand.length === 1)).toBe(true);
+      expect(game5.players.every(p => p.tableVisible.length === 3)).toBe(true);
 
       const game6 = createGame({
         lobbyCode: 'L02',
@@ -104,7 +106,9 @@ describe('Step 12: Release Validation Gate', () => {
         direction: 'clockwise',
       });
 
-      expect(game6.players.every(p => p.hand.length === 5)).toBe(true);
+      // 6-player game: dealt 5 hand cards, 3 moved to tableVisible → 2 in hand
+      expect(game6.players.every(p => p.hand.length === 2)).toBe(true);
+      expect(game6.players.every(p => p.tableVisible.length === 3)).toBe(true);
     });
 
     it('should provide playable card hints (client-side)', () => {

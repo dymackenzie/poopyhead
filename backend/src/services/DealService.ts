@@ -71,12 +71,10 @@ export function dealGame(deck: Card[], playerCount: number): DealResult {
     playerHands.push(hand);
   }
   
-  // Step 3: Player selects best 3 from hand (UI responsibility)
-  // For the server-side deal contract, we expose the selected visible cards
-  // without mutating the dealt hand. The table cards remain available for UI
-  // and later placement workflows.
+  // Step 3: The first 3 cards of each hand become that player's face-up table cards.
+  // Remove them from the hand so there is no card ID overlap between zones.
   for (let i = 0; i < playerCount; i++) {
-    const tableVisible = playerHands[i].slice(0, tableVisiblePerPlayer);
+    const tableVisible = playerHands[i].splice(0, tableVisiblePerPlayer);
     playerTableVisible.push(tableVisible);
   }
   
