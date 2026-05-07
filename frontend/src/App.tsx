@@ -84,16 +84,25 @@ export function App(): React.ReactElement {
           patch.phase = 'playing';
           patch.currentPlayerUsername = dataAny.currentTurnPlayerUsername;
           patch.currentTurnPlayerId = dataAny.currentTurnPlayerId;
+          if (dataAny.deckCount !== undefined) patch.deckCount = dataAny.deckCount;
 
           // If full game state is included, refresh hand/tableCards from it
           if (dataAny.game) {
             const game = dataAny.game as any;
-            const { currentPlayerId } = useGameStore.getState();
+            const { currentPlayerId, lobbyPlayers } = useGameStore.getState();
             const me = game.players.find((p: any) => p.id === currentPlayerId);
             patch.hand = me?.hand || [];
             patch.tableCards = me?.tableVisible || [];
             patch.blindCards = me?.tableBlind || [];
             patch.playPile = game.playPile;
+
+            if (dataAny.players) {
+              patch.lobbyPlayers = lobbyPlayers.map((player: GamePlayer) => {
+                const pub = dataAny.players.find((p: any) => p.id === player.id);
+                if (!pub) return player;
+                return { ...player, cardsInHand: pub.cardsInHand, tableVisible: pub.tableVisible, tableBlindCount: pub.tableBlindCount };
+              });
+            }
           }
         }
 
@@ -104,10 +113,39 @@ export function App(): React.ReactElement {
         const { lobbyPlayers } = useGameStore.getState();
         const nextPlayerId: string | undefined = dataAny.nextPlayerId;
         const nextPlayer = lobbyPlayers.find((p: GamePlayer) => p.id === nextPlayerId);
+
+        const updatedLobbyPlayers = lobbyPlayers.map((player: GamePlayer) => {
+          const pub = dataAny.players?.find((p: any) => p.id === player.id);
+          if (!pub) return player;
+          return { ...player, cardsInHand: pub.cardsInHand, tableVisible: pub.tableVisible, tableBlindCount: pub.tableBlindCount };
+        });
+
         useGameStore.setState({
           playPile: dataAny.pileState ?? dataAny.playPile ?? [],
           currentTurnPlayerId: nextPlayerId,
           currentPlayerUsername: nextPlayer?.username,
+          deckCount: dataAny.deckCount ?? 0,
+          activeConstraints: dataAny.activeConstraints ?? { sevenOrUnder: false, skipCount: 0 },
+          lobbyPlayers: updatedLobbyPlayers,
+        });
+      },
+      onPilePicked: (data) => {
+        const dataAny = data as any;
+        const { lobbyPlayers } = useGameStore.getState();
+
+        const updatedLobbyPlayers = lobbyPlayers.map((player: GamePlayer) => {
+          const pub = dataAny.players?.find((p: any) => p.id === player.id);
+          if (!pub) return player;
+          return { ...player, cardsInHand: pub.cardsInHand, tableVisible: pub.tableVisible, tableBlindCount: pub.tableBlindCount };
+        });
+
+        useGameStore.setState({
+          playPile: [],
+          currentTurnPlayerId: dataAny.nextPlayerId,
+          currentPlayerUsername: dataAny.nextPlayerUsername,
+          deckCount: dataAny.deckCount ?? 0,
+          activeConstraints: dataAny.activeConstraints ?? { sevenOrUnder: false, skipCount: 0 },
+          lobbyPlayers: updatedLobbyPlayers,
         });
       },
       onGameEnded: (data) => {

@@ -55,13 +55,14 @@
 }
 
 .ph-card--selected {
-  transform: translateY(-10px) scale(1.06);
-  box-shadow: var(--card-shadow-raised), 0 0 0 2px var(--color-white);
+  transform: translateY(-12px) scale(1.06);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35), 0 0 0 2px var(--color-black), 0 0 0 4px rgba(255, 255, 255, 0.85);
   z-index: 10;
+  border-color: var(--color-black);
 }
 
 .ph-card--selected:hover {
-  transform: translateY(-12px) scale(1.07);
+  transform: translateY(-14px) scale(1.07);
 }
 
 .ph-card--disabled {

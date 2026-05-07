@@ -26,6 +26,7 @@ export function initSocket(callbacks: {
   onPlayerReady?: (data: PlayerReadyPayload) => void;
   onGameEnded?: (data: { loserId: string; loserUsername: string }) => void;
   onSwapUpdate?: (data: GameStatePatch) => void;
+  onPilePicked?: (data: unknown) => void;
 }): Socket {
   socket = io(SOCKET_URL, {
     reconnection: true,
@@ -66,6 +67,10 @@ export function initSocket(callbacks: {
 
   socket.on('swapUpdate', (data: GameStatePatch) => {
     callbacks.onSwapUpdate?.(data);
+  });
+
+  socket.on('pilePicked', (data: unknown) => {
+    callbacks.onPilePicked?.(data);
   });
 
   socket.on('playerReconnected', (data: PlayerJoinedPayload) => {
@@ -153,6 +158,15 @@ export function playCards(gameId: string, playerId: string, cardIds: string[]): 
 export function swapCards(gameId: string, playerId: string, cardIds: string[]): Promise<unknown> {
   return new Promise((resolve) => {
     emitEvent('swapCards', { gameId, playerId, cardIds }, resolve);
+  });
+}
+
+/**
+ * Pick up the play pile.
+ */
+export function pickupPile(gameId: string, playerId: string): Promise<unknown> {
+  return new Promise((resolve) => {
+    emitEvent('pickupPile', { gameId, playerId }, resolve);
   });
 }
 

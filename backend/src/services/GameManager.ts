@@ -10,7 +10,7 @@ import { Card } from './DeckService';
 import { createDeck, drawCards } from './DeckService';
 import { dealGame } from './DealService';
 import { validateMove } from './MoveValidatorService';
-import { resolveTurn } from './TurnResolutionService';
+import { resolveTurn, advancePlayerIndex } from './TurnResolutionService';
 
 export interface GameInstance {
   id: string;
@@ -319,7 +319,7 @@ export function applySwap(input: ApplySwapInput): ApplySwapOutput {
   const updatedSwappedPlayers = [...game.swappedPlayers, playerId];
   const allPlayersSwapped = updatedSwappedPlayers.length === game.players.length;
 
-  const updatedGame: GameInstance = {
+  let updatedGame: GameInstance = {
     ...game,
     players: game.players.map(p => (p.id === playerId ? updatedPlayer : p)),
     swappedPlayers: updatedSwappedPlayers,
@@ -328,7 +328,87 @@ export function applySwap(input: ApplySwapInput): ApplySwapOutput {
     ...(allPlayersSwapped ? { startedAt: new Date() } : {}),
   };
 
+  // RULE_CANON Setup step 4: when all players have swapped, replenish each hand
+  // by drawing 3 cards from the deck to replace the 3 placed on the table.
+  if (allPlayersSwapped) {
+    let currentDeck = updatedGame.deck;
+    const refilledPlayers = updatedGame.players.map(p => {
+      const cardsNeeded = Math.min(3, currentDeck.length);
+      const drawn = currentDeck.slice(0, cardsNeeded);
+      currentDeck = currentDeck.slice(cardsNeeded);
+      return { ...p, hand: [...p.hand, ...drawn] };
+    });
+    updatedGame = { ...updatedGame, players: refilledPlayers, deck: currentDeck };
+  }
+
   return { success: true, updatedGame, allPlayersSwapped };
+}
+
+// ────────────────────────────────────────────────────────────────
+// PICKUP PILE ACTION
+// ────────────────────────────────────────────────────────────────
+
+export interface PickupActionInput {
+  game: GameInstance;
+  playerId: string;
+}
+
+export interface PickupActionOutput {
+  success: boolean;
+  reason?: string;
+  updatedGame?: GameInstance;
+}
+
+/**
+ * Processes a manual pickup-pile action.
+ * The current player takes all cards from the play pile into their hand,
+ * the pile is cleared, and the turn advances to the next player.
+ */
+export function processPickupAction(input: PickupActionInput): PickupActionOutput {
+  const { game, playerId } = input;
+
+  if (game.playOrder[game.currentPlayerIndex] !== playerId) {
+    return { success: false, reason: 'NOT_YOUR_TURN' };
+  }
+
+  const player = game.players.find(p => p.id === playerId);
+  if (!player) {
+    return { success: false, reason: 'PLAYER_NOT_FOUND' };
+  }
+
+  if (game.playPile.length === 0) {
+    return { success: false, reason: 'PILE_EMPTY' };
+  }
+
+  const updatedPlayer = { ...player, hand: [...player.hand, ...game.playPile] };
+
+  const nextPlayerIndex = advancePlayerIndex(
+    game.currentPlayerIndex,
+    1,
+    game.playOrder.length,
+    game.direction
+  );
+
+  return {
+    success: true,
+    updatedGame: {
+      ...game,
+      players: game.players.map(p => (p.id === playerId ? updatedPlayer : p)),
+      playPile: [],
+      currentPlayerIndex: nextPlayerIndex,
+      activeConstraints: { sevenOrUnder: false, skipCount: 0 },
+      turnHistory: [
+        ...game.turnHistory,
+        {
+          turnIndex: game.turnHistory.length + 1,
+          playerId,
+          action: 'pickup',
+          outcome: `Picked up ${game.playPile.length} cards`,
+          timestamp: new Date(),
+        },
+      ],
+    },
+  };
 }
 
 /**

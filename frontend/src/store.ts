@@ -39,6 +39,8 @@ export interface GameState {
   /** Player ID of whoever's turn it currently is */
   currentTurnPlayerId?: string;
   playableCards: string[];
+  deckCount: number;
+  activeConstraints: { sevenOrUnder: boolean; skipCount: number };
 
   // Actions
   connect: () => void;
@@ -67,6 +69,8 @@ export const useGameStore = create<GameState>((set) => ({
   blindCards: [],
   playPile: [],
   playableCards: [],
+  deckCount: 0,
+  activeConstraints: { sevenOrUnder: false, skipCount: 0 },
 
   // Actions
   connect: () => set({ connected: true }),

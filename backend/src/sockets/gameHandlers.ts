@@ -22,6 +22,7 @@ import {
 import {
   createGame,
   processPlayCardAction,
+  processPickupAction,
   checkGameEnd,
   endGame,
   applySwap,
@@ -78,6 +79,11 @@ export function setupSocketHandlers(io: Server, ns: PoopyheadNamespace) {
     // GAME: Play cards
     socket.on('playCard', (data, callback) => {
       handlePlayCard(socket, data, callback, io, ns);
+    });
+
+    // GAME: Manual pickup pile
+    socket.on('pickupPile', (data, callback) => {
+      handlePickupPile(socket, data, callback, io, ns);
     });
     
     // RECONNECT: Recover session after disconnect
@@ -329,6 +335,8 @@ function handleSwapCards(
       payload.game = updatedGame;
       payload.currentTurnPlayerId = firstTurnPlayer?.id;
       payload.currentTurnPlayerUsername = firstTurnPlayer?.username;
+      payload.deckCount = updatedGame.deck.length;
+      payload.players = buildPublicPlayerState(updatedGame);
     }
 
     io.to(`lobby:${game.lobbyCode}`).emit('swapUpdate', payload);
@@ -386,9 +394,64 @@ function handlePlayCard(
       nextPlayerId: updatedGame.playOrder[updatedGame.currentPlayerIndex],
       pileState: updatedGame.playPile,
       bombTriggered: actionResult.eventType === 'bomb_triggered',
+      deckCount: updatedGame.deck.length,
+      activeConstraints: updatedGame.activeConstraints,
+      players: buildPublicPlayerState(updatedGame),
     });
     
     console.log(`[Game] ${data.playerId} played cards in ${data.gameId}`);
+  } catch (error) {
+    callback({ success: false, reason: 'ERROR', error: (error as Error).message });
+  }
+}
+
+/**
+ * Returns public (non-secret) player state visible to all clients.
+ */
+function buildPublicPlayerState(game: GameInstance) {
+  return game.players.map(p => ({
+    id: p.id,
+    cardsInHand: p.hand.length,
+    tableVisible: p.tableVisible,   // visible to all by rule
+    tableBlindCount: p.tableBlind.length,
+  }));
+}
+
+/**
+ * Handle: Pickup pile
+ */
+function handlePickupPile(
+  socket: Socket,
+  data: { gameId: string; playerId: string },
+  callback: Function,
+  io: Server,
+  ns: PoopyheadNamespace
+) {
+  try {
+    const game = ns.games.get(data.gameId);
+    if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
+
+    const result = processPickupAction({ game, playerId: data.playerId });
+    if (!result.success) return callback({ success: false, reason: result.reason });
+
+    const updatedGame = result.updatedGame!;
+    ns.games.set(data.gameId, updatedGame);
+
+    const me = updatedGame.players.find(p => p.id === data.playerId);
+    callback({ success: true, hand: me?.hand || [] });
+
+    const nextPlayer = updatedGame.players.find(p => p.id === updatedGame.playOrder[updatedGame.currentPlayerIndex]);
+    io.to(`lobby:${game.lobbyCode}`).emit('pilePicked', {
+      playerId: data.playerId,
+      nextPlayerId: updatedGame.playOrder[updatedGame.currentPlayerIndex],
+      nextPlayerUsername: nextPlayer?.username,
+      pileState: [],
+      deckCount: updatedGame.deck.length,
+      activeConstraints: updatedGame.activeConstraints,
+      players: buildPublicPlayerState(updatedGame),
+    });
+
+    console.log(`[Game] ${data.playerId} picked up pile in ${data.gameId}`);
   } catch (error) {
     callback({ success: false, reason: 'ERROR', error: (error as Error).message });
   }

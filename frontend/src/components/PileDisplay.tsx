@@ -9,11 +9,17 @@ interface PileDisplayProps {
   topCard?: GameCard | null;
   /** Show stacked deck visual (for draw pile) */
   isDeck?: boolean;
+  onClick?: () => void;
 }
 
-export function PileDisplay({ title, count, topCard, isDeck = false }: PileDisplayProps): React.ReactElement {
+export function PileDisplay({ title, count, topCard, isDeck = false, onClick }: PileDisplayProps): React.ReactElement {
   return (
-    <div className={`ph-pile ${isDeck ? 'ph-pile--deck' : 'ph-pile--discard'}`}>
+    <div
+      className={`ph-pile ${isDeck ? 'ph-pile--deck' : 'ph-pile--discard'}${onClick ? ' ph-pile--clickable' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      aria-label={onClick ? `${title}: ${count} cards — tap to see breakdown` : undefined}
+    >
       <div className="ph-pile-label">{title}</div>
       <div className="ph-pile-slot" aria-live="polite" aria-label={`${title}: ${count} cards`}>
         {isDeck ? (

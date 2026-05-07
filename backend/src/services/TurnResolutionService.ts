@@ -84,8 +84,9 @@ export function resolveTurn(input: TurnResolutionInput): TurnResolutionOutput {
   } else {
     // Apply constraint from play
     if (constraintApplied.constraint === 'reset') {
-      // Reset: next player can play anything
-      newConstraints = { sevenOrUnder: false, skipCount: 0, cardUnderneath: undefined };
+      // RULE_CANON: If sevenOrUnder was active and a 2 (reset/wildcard) is played under it,
+      // the constraint remains for the next eligible player.
+      newConstraints = { sevenOrUnder: input.activeConstraints.sevenOrUnder, skipCount: 0, cardUnderneath: undefined };
     } else if (constraintApplied.constraint === 'sevenOrUnder') {
       newConstraints = { sevenOrUnder: true, skipCount: 0, cardUnderneath: undefined };
     } else if (constraintApplied.constraint === 'skip') {
@@ -104,9 +105,10 @@ export function resolveTurn(input: TurnResolutionInput): TurnResolutionOutput {
         cardUnderneath: constraintApplied.cardUnderneath,
       };
     } else {
-      // No special constraint: inherit from current (but reset skip count)
+      // No special constraint: normal card played — release sevenOrUnder constraint.
+      // RULE_CANON: constraint only persists when 2 or 3 is played under it.
       newConstraints = {
-        sevenOrUnder: input.activeConstraints.sevenOrUnder,
+        sevenOrUnder: false,
         skipCount: 0,
         cardUnderneath: undefined,
       };
@@ -174,7 +176,7 @@ export function resolveTurn(input: TurnResolutionInput): TurnResolutionOutput {
 /**
  * Advances player index by count, wrapping around.
  */
-function advancePlayerIndex(
+export function advancePlayerIndex(
   currentIndex: number,
   count: number,
   playerCount: number,

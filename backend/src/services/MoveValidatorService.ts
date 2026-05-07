@@ -85,6 +85,14 @@ export function validateMove(context: ValidationContext): ValidationResult {
     return { valid: false, reason: 'CARD_NOT_FOUND_IN_SOURCE_ZONE' };
   }
   
+  // Rule 4: Multiple cards played from hand must all share the same rank
+  if (cardsToPlay.length > 1 && sourceZone === 'hand') {
+    const firstRank = cardsToPlay[0].rank;
+    if (!cardsToPlay.every(c => c.rank === firstRank)) {
+      return { valid: false, reason: 'MIXED_RANKS_NOT_ALLOWED' };
+    }
+  }
+
   // Rule 3 & 7: Check pile legality
   const pileValidation = validatePileLegality(cardsToPlay, context.currentPile, context.activeConstraints);
   if (!pileValidation.valid) {

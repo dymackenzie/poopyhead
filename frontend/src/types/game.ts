@@ -11,6 +11,9 @@ export interface LobbyPlayer {
   ready?: boolean;
   isCurrentPlayer?: boolean;
   isConnected?: boolean;
+  cardsInHand?: number;
+  tableVisible?: GameCard[];
+  tableBlindCount?: number;
 }
 
 export interface LobbySnapshot {
@@ -51,6 +54,8 @@ export interface GameStatePatch {
   phase?: 'swapping' | 'playing';
   swappedCount?: number;
   totalPlayers?: number;
+  deckCount?: number;
+  activeConstraints?: { sevenOrUnder: boolean; skipCount: number };
 }
 
 export interface PlayerJoinedPayload {
