@@ -21,6 +21,7 @@ export interface ValidationContext {
     sevenOrUnder: boolean;
     skipCount: number;
   };
+  bombEnabled: boolean;
 }
 
 export interface ValidationResult {
@@ -59,32 +60,44 @@ export function validateMove(context: ValidationContext): ValidationResult {
   let cardsToPlay: Card[] = [];
   let sourceZone: 'hand' | 'table' | 'blind' = 'hand';
 
-  if (
-    context.playerHand.length === 0 &&
-    context.playerTableVisible.length > 0 &&
-    context.playerTableBlind.length > 0 &&
-    context.cardIds.some(cardId => context.playerTableBlind.some(card => card.id === cardId))
-  ) {
-    return { valid: false, reason: 'BLIND_CARDS_NOT_PLAYABLE_YET' };
-  }
-  
-  // Rule 1: Play from hand first, then table, then blind
+  // Rule 1: Zone priority — hand → table/exposed-blind → covered-blind
   if (context.playerHand.length > 0) {
     sourceZone = 'hand';
     cardsToPlay = findCardsInZone(context.cardIds, context.playerHand);
-  } else if (context.playerTableVisible.length > 0) {
-    sourceZone = 'table';
-    cardsToPlay = findCardsInZone(context.cardIds, context.playerTableVisible);
-  } else if (context.playerTableBlind.length > 0) {
-    sourceZone = 'blind';
-    cardsToPlay = findCardsInZone(context.cardIds, context.playerTableBlind);
+  } else {
+    const isBlindAttempt = context.cardIds.some(id =>
+      context.playerTableBlind.some(c => c.id === id)
+    );
+    // A blind slot is exposed when blind count exceeds visible count
+    // (meaning at least one blind card has no visible card on top)
+    const hasExposedBlind = context.playerTableBlind.length > context.playerTableVisible.length;
+
+    if (isBlindAttempt) {
+      if (context.playerTableVisible.length > 0 && !hasExposedBlind) {
+        // Every blind slot still has a visible card — must clear visible first
+        return { valid: false, reason: 'BLIND_CARDS_NOT_PLAYABLE_YET' };
+      }
+      sourceZone = 'blind';
+      cardsToPlay = findCardsInZone(context.cardIds, context.playerTableBlind);
+    } else if (context.playerTableVisible.length > 0) {
+      sourceZone = 'table';
+      cardsToPlay = findCardsInZone(context.cardIds, context.playerTableVisible);
+    } else if (context.playerTableBlind.length > 0) {
+      sourceZone = 'blind';
+      cardsToPlay = findCardsInZone(context.cardIds, context.playerTableBlind);
+    }
   }
   
   // Verify all cards found
   if (cardsToPlay.length !== context.cardIds.length) {
     return { valid: false, reason: 'CARD_NOT_FOUND_IN_SOURCE_ZONE' };
   }
-  
+
+  // Blind card flips always proceed regardless of pile rank — fail outcome handled by GameManager
+  if (sourceZone === 'blind') {
+    return { valid: true, cardsToPlay, sourceZone };
+  }
+
   // Rule 4: Multiple cards played from hand must all share the same rank
   if (cardsToPlay.length > 1 && sourceZone === 'hand') {
     const firstRank = cardsToPlay[0].rank;
@@ -94,7 +107,7 @@ export function validateMove(context: ValidationContext): ValidationResult {
   }
 
   // Rule 3 & 7: Check pile legality
-  const pileValidation = validatePileLegality(cardsToPlay, context.currentPile, context.activeConstraints);
+  const pileValidation = validatePileLegality(cardsToPlay, context.currentPile, context.activeConstraints, context.bombEnabled);
   if (!pileValidation.valid) {
     return pileValidation;
   }
@@ -105,13 +118,10 @@ export function validateMove(context: ValidationContext): ValidationResult {
     if (sameRankCount > 1 && cardsToPlay.length > 1) {
       return { valid: false, reason: 'TABLE_SAME_RANK_NO_STACK' };
     }
+    // Table visible plays always proceed regardless of pile rank — same fail-pickup mechanic as blind
+    return { valid: true, cardsToPlay, sourceZone };
   }
-  
-  // Rule 6: Cannot play blind if face-up not empty
-  if (sourceZone === 'blind' && context.playerTableVisible.length > 0) {
-    return { valid: false, reason: 'BLIND_CARDS_NOT_PLAYABLE_YET' };
-  }
-  
+
   return {
     valid: true,
     cardsToPlay,
@@ -138,43 +148,57 @@ function findCardsInZone(cardIds: string[], zone: Card[]): Card[] {
 /**
  * Validates pile legality according to RULE_CANON.
  * - Cards must beat top of pile (equal or higher value)
- * - OR be wildcards (2, 3, 10, bomb)
+ * - OR be wildcards (2, 3, 10-when-bomb-enabled)
  * - UNLESS 7 constraint active (must play 7 or under, or wildcard)
+ * - Rank 3 ("invisible") is transparent: look through consecutive 3s to find the effective top card
  */
 function validatePileLegality(
   cardsToPlay: Card[],
   currentPile: Card[],
-  activeConstraints: { sevenOrUnder: boolean; skipCount: number }
+  activeConstraints: { sevenOrUnder: boolean; skipCount: number },
+  bombEnabled: boolean
 ): ValidationResult {
   // Empty pile: any card is legal
   if (currentPile.length === 0) {
     return { valid: true };
   }
-  
-  const topCard = currentPile[currentPile.length - 1];
-  
+
+  // RULE_CANON: rank 3 is "invisible" — look through consecutive 3s on top to find
+  // the effective card that must be beaten.
+  let effectiveTopIndex = currentPile.length - 1;
+  while (effectiveTopIndex >= 0 && currentPile[effectiveTopIndex].specialType === 'invisible') {
+    effectiveTopIndex--;
+  }
+  // If the entire pile is 3s, treat it as an empty pile (any card is legal)
+  if (effectiveTopIndex < 0) {
+    return { valid: true };
+  }
+  const topCard = currentPile[effectiveTopIndex];
+
   // Check each card being played
   for (const card of cardsToPlay) {
-    // Wildcards always legal
-    if (card.isWildcard) {
+    // RULE_CANON: rank 10 is only a wildcard when bombEnabled is true;
+    // otherwise it is a normal card subject to rank rules.
+    const isEffectiveWildcard = card.isWildcard && (card.specialType !== 'bomb' || bombEnabled);
+    if (isEffectiveWildcard) {
       continue;
     }
-    
+
     // 7 constraint active?
     if (activeConstraints.sevenOrUnder) {
-      // Must play 7 or under (or wildcard, which is already checked)
+      // Must play 7 or under (or wildcard, already handled)
       if (card.value > 7) {
         return { valid: false, reason: 'SEVEN_CONSTRAINT_VIOLATION' };
       }
       continue;
     }
-    
+
     // Normal pile beat rule
     if (card.value < topCard.value) {
       return { valid: false, reason: 'CARD_DOES_NOT_BEAT_PILE' };
     }
   }
-  
+
   return { valid: true };
 }
 
@@ -253,16 +277,10 @@ export function evaluateConstraint(
   }
   
   if (topCard.specialType === 'skip') {
-    // Count stacked 8s
-    let skipCount = 1;
-    for (let i = newPile.length - 2; i >= 0; i--) {
-      if (newPile[i].specialType === 'skip') {
-        skipCount++;
-      } else {
-        break;
-      }
-    }
-    return { constraint: 'skip', skipCount };
+    // Count only 8s played in THIS turn (stacking multiple 8s from hand).
+    // Do NOT count 8s from previous turns that remain in the pile.
+    const skipCount = cardsPlayed.filter(c => c.specialType === 'skip').length;
+    return { constraint: 'skip', skipCount: Math.max(1, skipCount) };
   }
   
   if (topCard.specialType === 'bomb') {

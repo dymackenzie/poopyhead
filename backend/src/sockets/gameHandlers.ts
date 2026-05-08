@@ -374,19 +374,42 @@ function handlePlayCard(
     
     const updatedGame = actionResult.updatedGame!;
     ns.games.set(data.gameId, updatedGame);
-    
-    // Check for game end
+
+    // Check for game end (applies to all outcomes including blind_fail)
     const endCheck = checkGameEnd(updatedGame);
     if (endCheck.ended) {
       const finalGame = endGame(updatedGame, endCheck.loserId!);
       ns.games.set(data.gameId, finalGame);
-      
+
       io.to(`lobby:${game.lobbyCode}`).emit('gameEnded', {
         loserId: endCheck.loserId,
         loserUsername: updatedGame.players.find((p: any) => p.id === endCheck.loserId)?.username,
       });
     }
-    
+
+    // Failed table/blind play: emit as pilePicked so frontend clears pile and advances turn
+    if (actionResult.eventType === 'blind_fail') {
+      const me = updatedGame.players.find(p => p.id === data.playerId);
+      callback({ success: true, game: updatedGame, hand: me?.hand || [] });
+
+      const nextPlayer = updatedGame.players[updatedGame.currentPlayerIndex];
+      io.to(`lobby:${game.lobbyCode}`).emit('pilePicked', {
+        playerId: data.playerId,
+        nextPlayerId: updatedGame.playOrder[updatedGame.currentPlayerIndex],
+        nextPlayerUsername: nextPlayer?.username,
+        pileState: [],
+        deckCount: updatedGame.deck.length,
+        activeConstraints: updatedGame.activeConstraints,
+        players: buildPublicPlayerState(updatedGame),
+        blindFail: true,
+        isBlindPlay: actionResult.sourceZone === 'blind',
+        revealedCard: actionResult.cardsPlayed?.[0] ?? null,
+      });
+
+      console.log(`[Game] ${data.playerId} blind flip failed in ${data.gameId}`);
+      return;
+    }
+
     callback({ success: true, game: updatedGame });
     io.to(`lobby:${game.lobbyCode}`).emit('cardPlayed', {
       playerId: data.playerId,
@@ -397,8 +420,13 @@ function handlePlayCard(
       deckCount: updatedGame.deck.length,
       activeConstraints: updatedGame.activeConstraints,
       players: buildPublicPlayerState(updatedGame),
+      isBlindPlay: actionResult.sourceZone === 'blind',
+      isTablePlay: actionResult.sourceZone === 'table',
+      revealedCard: (actionResult.sourceZone === 'blind' || actionResult.sourceZone === 'table')
+        ? (actionResult.cardsPlayed?.[0] ?? null)
+        : null,
     });
-    
+
     console.log(`[Game] ${data.playerId} played cards in ${data.gameId}`);
   } catch (error) {
     callback({ success: false, reason: 'ERROR', error: (error as Error).message });

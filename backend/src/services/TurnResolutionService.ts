@@ -84,9 +84,9 @@ export function resolveTurn(input: TurnResolutionInput): TurnResolutionOutput {
   } else {
     // Apply constraint from play
     if (constraintApplied.constraint === 'reset') {
-      // RULE_CANON: If sevenOrUnder was active and a 2 (reset/wildcard) is played under it,
-      // the constraint remains for the next eligible player.
-      newConstraints = { sevenOrUnder: input.activeConstraints.sevenOrUnder, skipCount: 0, cardUnderneath: undefined };
+      // RULE_CANON: A 2 (reset) resets the pile entirely; sevenOrUnder does NOT persist
+      // through a reset — it acts like an empty pile for the next player.
+      newConstraints = { sevenOrUnder: false, skipCount: 0, cardUnderneath: undefined };
     } else if (constraintApplied.constraint === 'sevenOrUnder') {
       newConstraints = { sevenOrUnder: true, skipCount: 0, cardUnderneath: undefined };
     } else if (constraintApplied.constraint === 'skip') {
@@ -122,30 +122,14 @@ export function resolveTurn(input: TurnResolutionInput): TurnResolutionOutput {
     // Extra turn: current player plays again
     nextPlayerIndex = input.currentPlayerIndex;
   } else if (newConstraints.skipCount > 0) {
-    // Skip constraint: advance by skipCount + 1
+    // Skip constraint: advance by skipCount + 1 (skip N players, land on N+1th)
     nextPlayerIndex = advancePlayerIndex(
       input.currentPlayerIndex,
       newConstraints.skipCount + 1,
       input.playerCount,
       input.direction
     );
-    
-    // Check for wrap-around skip (skip includes original player)
-    if (doesSkipWrapToOriginal(
-      input.currentPlayerIndex,
-      newConstraints.skipCount + 1,
-      input.playerCount,
-      input.direction
-    )) {
-      // Skip wraps back to include original player
-      nextPlayerIndex = advancePlayerIndex(
-        input.currentPlayerIndex,
-        newConstraints.skipCount + 2,
-        input.playerCount,
-        input.direction
-      );
-    }
-    
+
     // Clear skip count after resolving
     newConstraints.skipCount = 0;
   } else {
@@ -185,20 +169,6 @@ export function advancePlayerIndex(
   const delta = direction === 'clockwise' ? count : -count;
   const newIndex = (currentIndex + delta) % playerCount;
   return newIndex < 0 ? newIndex + playerCount : newIndex;
-}
-
-/**
- * Checks if skips wrap around to include original player.
- */
-function doesSkipWrapToOriginal(
-  currentIndex: number,
-  skipCount: number,
-  playerCount: number,
-  direction: 'clockwise' | 'counterclockwise'
-): boolean {
-  // Wrap occurs if skipCount >= playerCount - 1
-  // (because we skip N players, which wraps if N >= total - 1)
-  return skipCount >= playerCount - 1;
 }
 
 /**

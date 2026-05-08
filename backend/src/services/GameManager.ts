@@ -132,7 +132,9 @@ export interface PlayCardActionOutput {
   success: boolean;
   reason?: string;
   updatedGame?: GameInstance;
-  eventType?: string; // 'card_played', 'bomb_triggered', 'pickup_required', etc.
+  eventType?: string; // 'card_played', 'bomb_triggered', 'blind_fail'
+  sourceZone?: 'hand' | 'table' | 'blind';
+  cardsPlayed?: Card[]; // full card objects (needed for blind/table reveal animations)
 }
 
 export function processPlayCardAction(input: PlayCardActionInput): PlayCardActionOutput {
@@ -173,6 +175,7 @@ export function processPlayCardAction(input: PlayCardActionInput): PlayCardActio
     currentPile: game.playPile,
     isPlayerTurn: true,
     activeConstraints: game.activeConstraints,
+    bombEnabled: game.bombEnabled,
   });
   
   if (!validationResult.valid) {
@@ -197,7 +200,59 @@ export function processPlayCardAction(input: PlayCardActionInput): PlayCardActio
   
   // Add cards to pile
   const newPile = [...game.playPile, ...cardsToPlay];
-  
+
+  // Table visible / blind card play: always allowed to proceed, but if the card doesn't
+  // beat the pile the player picks up everything (card + pile go to hand, pile clears).
+  if ((validationResult.sourceZone === 'blind' || validationResult.sourceZone === 'table') && game.playPile.length > 0) {
+    const blindCard = cardsToPlay[0];
+    let blindFails = false;
+
+    let effectiveTopIndex = game.playPile.length - 1;
+    while (effectiveTopIndex >= 0 && game.playPile[effectiveTopIndex].specialType === 'invisible') {
+      effectiveTopIndex--;
+    }
+
+    if (effectiveTopIndex >= 0) {
+      const topCard = game.playPile[effectiveTopIndex];
+      const isWildcard = blindCard.isWildcard && (blindCard.specialType !== 'bomb' || game.bombEnabled);
+      if (!isWildcard) {
+        blindFails = game.activeConstraints.sevenOrUnder
+          ? blindCard.value > 7
+          : blindCard.value < topCard.value;
+      }
+    }
+
+    if (blindFails) {
+      const failedPlayer = { ...updatedPlayer, hand: [...updatedPlayer.hand, ...newPile] };
+      const nextIndex = advancePlayerIndex(
+        game.currentPlayerIndex, 1, game.playOrder.length, game.direction
+      );
+      return {
+        success: true,
+        updatedGame: {
+          ...game,
+          players: game.players.map(p => (p.id === playerId ? failedPlayer : p)),
+          playPile: [],
+          currentPlayerIndex: nextIndex,
+          activeConstraints: { sevenOrUnder: false, skipCount: 0 },
+          turnHistory: [
+            ...game.turnHistory,
+            {
+              turnIndex: game.turnHistory.length + 1,
+              playerId,
+              action: 'pickup',
+              outcome: `${validationResult.sourceZone === 'blind' ? 'Blind flip' : 'Table play'} failed — picked up ${newPile.length} cards`,
+              timestamp: new Date(),
+            },
+          ],
+        },
+        eventType: 'blind_fail',
+        sourceZone: validationResult.sourceZone,
+        cardsPlayed: cardsToPlay,
+      };
+    }
+  }
+
   // Resolve turn (check constraints, next player, bombs, etc.)
   const turnResolution = resolveTurn({
     playerId,
@@ -238,6 +293,8 @@ export function processPlayCardAction(input: PlayCardActionInput): PlayCardActio
     success: true,
     updatedGame,
     eventType,
+    sourceZone: validationResult.sourceZone || 'hand',
+    cardsPlayed: cardsToPlay,
   };
 }
 

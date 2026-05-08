@@ -364,11 +364,12 @@ describe('Step 4: Move Validation and Turn Resolution', () => {
         activeConstraints: { sevenOrUnder: false, skipCount: 0 },
         bombEnabled: true,
       };
-      
+
       const result = resolveTurn(input);
-      // 3 stacked 8s total on a 4-player table wraps the skip onto the original player.
-      expect(result.nextPlayerIndex).toBe(1);
-      expect(result.nextPlayerId).toBe('p2');
+      // 2 eights played this turn → skip 2 players (p2 and p3), p4 plays next.
+      // Only eights from cardsPlayed count; stale pile 8s are NOT accumulated.
+      expect(result.nextPlayerIndex).toBe(3);
+      expect(result.nextPlayerId).toBe('p4');
     });
     
     it('should wrap player index', () => {

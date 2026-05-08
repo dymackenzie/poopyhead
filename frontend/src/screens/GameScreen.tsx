@@ -13,7 +13,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store';
 import { playCards, swapCards, pickupPile } from '../socketClient';
-import type { GameState } from '../store';
+import type { GameState, BlindReveal } from '../store';
 import Card from '../components/Card';
 import PileDisplay from '../components/PileDisplay';
 import './GameScreen.css';
@@ -21,7 +21,8 @@ import type { GameCard, LobbyPlayer } from '../types/game';
 
 /* ── Constants ──────────────────────────────── */
 
-const WILDCARD_RANKS = ['2', '3', '10'];
+const ALWAYS_WILDCARD_RANKS = ['2', '3']; // 10 is only wildcard when bombEnabled
+
 
 const RANK_VALUES: Record<string, number> = {
   '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8,
@@ -30,6 +31,42 @@ const RANK_VALUES: Record<string, number> = {
 
 const AUTO_PICKUP_DELAY_MS = 600;
 const PILE_COUNTS_DISMISS_MS = 2500;
+
+// Feature 11 — blind reveal timing (ms)
+const BLIND_FLIP_START_MS  = 400;   // delay before flip begins (reduced for pile-anchored feel)
+const BLIND_FLIP_DUR_MS    = 400;   // flip animation duration (out + in)
+const BLIND_TOTAL_MS       = 2800;  // total overlay lifetime
+
+// Feature 12 — pickup animation lifetime
+const PICKUP_ANIM_MS = 800;
+
+// Issue 8 — bomb animation lifetime
+const BOMB_ANIM_MS = 600;
+
+// Issue 7 — hand overflow thresholds
+const HAND_COMPACT_THRESHOLD = 8;   // groups before shrinking kicks in
+const HAND_CARD_W_DEFAULT = 58;     // md card width
+const HAND_CARD_H_DEFAULT = 98;     // md card height + lift headroom
+const HAND_CARD_W_SM = 46;          // compact card width (between sm and md)
+const HAND_CARD_H_SM = 84;
+const HAND_GAP_DEFAULT = 8;
+const HAND_GAP_SM = 4;
+
+// Feature 7 — natural rank sort order for hand grouping
+// Wildcards (2, 3) go to the end so strategic cards cluster together
+const RANK_SORT_ORDER: Record<string, number> = {
+  '4': 0, '5': 1, '6': 2, '7': 3, '8': 4, '9': 5, '10': 6,
+  'J': 7, 'Q': 8, 'K': 9, 'A': 10, '2': 11, '3': 12,
+};
+
+// Stagger offsets (px) for the inline style --fly-x / --fly-rot CSS vars
+const FLY_CARD_OFFSETS: Array<{ x: number; rot: number; delay: number }> = [
+  { x: -60, rot: -12, delay: 0   },
+  { x: -30, rot: -5,  delay: 40  },
+  { x:   0, rot:  2,  delay: 80  },
+  { x:  30, rot:  8,  delay: 120 },
+  { x:  55, rot:  15, delay: 160 },
+];
 
 /* ── Helpers ────────────────────────────────── */
 
@@ -42,26 +79,162 @@ function rankToValue(rank: string): number {
   return RANK_VALUES[rank] ?? 0;
 }
 
+/** Feature 7 — Group hand cards by rank, sorted by natural play order */
+interface HandGroup {
+  rank: string;
+  cards: GameCard[];
+}
+
+function groupHandByRank(hand: GameCard[]): HandGroup[] {
+  const map = new Map<string, GameCard[]>();
+  for (const card of hand) {
+    const existing = map.get(card.rank);
+    if (existing) {
+      existing.push(card);
+    } else {
+      map.set(card.rank, [card]);
+    }
+  }
+  return Array.from(map.entries())
+    .map(([rank, cards]) => ({ rank, cards }))
+    .sort((a, b) => {
+      const ao = RANK_SORT_ORDER[a.rank] ?? 99;
+      const bo = RANK_SORT_ORDER[b.rank] ?? 99;
+      return ao - bo;
+    });
+}
+
 function isCardPlayable(
   card: GameCard,
   pile: GameCard[],
-  constraints: { sevenOrUnder: boolean }
+  constraints: { sevenOrUnder: boolean },
+  bombEnabled: boolean
 ): boolean {
-  // Wildcards are always playable
-  if (WILDCARD_RANKS.includes(card.rank)) return true;
+  // 2 and 3 are always wildcards; 10 is only a wildcard when bomb mode is on
+  const isWildcard = ALWAYS_WILDCARD_RANKS.includes(card.rank) || (card.rank === '10' && bombEnabled);
+  if (isWildcard) return true;
 
-  // Empty pile: any card is playable
-  if (pile.length === 0) return true;
+  // Empty pile (or pile consisting entirely of invisible 3s): any card is playable
+  let effectiveTopIndex = pile.length - 1;
+  while (effectiveTopIndex >= 0 && pile[effectiveTopIndex].rank === '3') {
+    effectiveTopIndex--;
+  }
+  if (effectiveTopIndex < 0) return true;
 
-  const topCard = pile[pile.length - 1];
+  const topCard = pile[effectiveTopIndex];
 
   // 7-or-under constraint: must play 7 or lower
   if (constraints.sevenOrUnder) {
     return rankToValue(card.rank) <= 7;
   }
 
-  // Normal: must be >= top card value
+  // Normal: must be >= effective top card value
   return rankToValue(card.rank) >= rankToValue(topCard.rank);
+}
+
+/* ── Feature 11: Blind Card Reveal (Issue 5 — pile-anchored) ──── */
+
+interface BlindRevealOverlayProps {
+  reveal: BlindReveal;
+  onDone: () => void;
+}
+
+function BlindRevealOverlay({ reveal, onDone }: BlindRevealOverlayProps): React.ReactElement {
+  // Phase: 'back' → show face-down; 'front' → show face-up after flip
+  const [phase, setPhase] = useState<'back' | 'flipping-out' | 'flipping-in' | 'front'>('back');
+
+  useEffect(() => {
+    // After delay, start the two-phase flip
+    const t1 = setTimeout(() => setPhase('flipping-out'), BLIND_FLIP_START_MS);
+    const t2 = setTimeout(() => setPhase('flipping-in'), BLIND_FLIP_START_MS + BLIND_FLIP_DUR_MS / 2);
+    const t3 = setTimeout(() => setPhase('front'), BLIND_FLIP_START_MS + BLIND_FLIP_DUR_MS);
+    const t4 = setTimeout(onDone, BLIND_TOTAL_MS);
+
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isFaceUp = phase === 'flipping-in' || phase === 'front';
+
+  // Card wrap classes drive the CSS animations
+  const wrapClass = [
+    'gs-blind-overlay__card-wrap',
+    phase === 'flipping-out' ? 'gs-blind-overlay__card-wrap--flipping-out' : '',
+    phase === 'flipping-in'  ? 'gs-blind-overlay__card-wrap--flipping-in'  : '',
+    phase === 'front' && reveal.success  ? 'gs-blind-overlay__card-wrap--success' : '',
+    phase === 'front' && !reveal.success ? 'gs-blind-overlay__card-wrap--fail'    : '',
+  ].filter(Boolean).join(' ');
+
+  // Issue 5 — pile-anchored: rendered inside .gs-board as an absolute overlay,
+  // not fixed full-screen. The card animates on top of the pile area.
+  return (
+    <div className="gs-blind-pile-overlay" role="status" aria-live="assertive" aria-label="Blind card reveal">
+      <div className={wrapClass}>
+        <Card
+          rank={isFaceUp ? reveal.card.rank : undefined}
+          suit={isFaceUp ? reveal.card.suit : undefined}
+          faceDown={!isFaceUp}
+          size="lg"
+          aria-label={isFaceUp ? `${reveal.card.rank} of ${reveal.card.suit}` : 'Blind card flipping'}
+        />
+      </div>
+
+      {phase === 'front' && (
+        <div
+          className={`gs-blind-overlay__result ${reveal.success ? 'gs-blind-overlay__result--success' : 'gs-blind-overlay__result--fail'}`}
+          aria-label={reveal.success ? 'Success' : 'Failed'}
+        >
+          {reveal.success ? 'YES!' : 'NOPE!'}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Feature 12: Pickup Pile Animation ───────── */
+
+// Issue 3 — direction determines fly target: 'down' = local player (bottom),
+// 'up' = opponent at top, 'left'/'right' = side opponents
+type FlyDirection = 'down' | 'up' | 'left' | 'right';
+
+const FLY_VECTORS: Record<FlyDirection, { x: number; y: number }> = {
+  down:  { x:   0, y:  200 },
+  up:    { x:   0, y: -200 },
+  left:  { x: -220, y: -80 },
+  right: { x:  220, y: -80 },
+};
+
+interface PickupAnimationProps {
+  direction: FlyDirection;
+}
+
+function PickupAnimation({ direction }: PickupAnimationProps): React.ReactElement {
+  const vec = FLY_VECTORS[direction];
+  return (
+    <div className="gs-pickup-animation" aria-hidden="true">
+      {FLY_CARD_OFFSETS.map((cfg, i) => (
+        <div
+          key={i}
+          className="gs-pickup-fly-card"
+          style={{
+            '--fly-x': `${cfg.x + vec.x}px`,
+            '--fly-y': `${vec.y}px`,
+            '--fly-rot': `${cfg.rot}deg`,
+            animationDelay: `${cfg.delay}ms`,
+          } as React.CSSProperties}
+        />
+      ))}
+    </div>
+  );
+}
+
+/* ── Issue 8: Bomb Animation ──────────────────── */
+
+function BombAnimation(): React.ReactElement {
+  return (
+    <div className="gs-bomb-animation" aria-hidden="true">
+      <div className="gs-bomb-burst" />
+    </div>
+  );
 }
 
 /* ── Swap Phase UI ───────────────────────────── */
@@ -197,6 +370,11 @@ export function GameScreen(): React.ReactElement {
   const totalPlayers          = useGameStore((s) => s.totalPlayers);
   const deckCount             = useGameStore((s) => s.deckCount);
   const activeConstraints     = useGameStore((s) => s.activeConstraints);
+  const bombEnabled           = useGameStore((s) => s.bombEnabled);
+  const blindReveal           = useGameStore((s) => s.blindReveal);
+  const pickupAnimation       = useGameStore((s) => s.pickupAnimation);
+  const pickupPlayerId        = useGameStore((s) => s.pickupPlayerId);
+  const bombAnimation         = useGameStore((s) => s.bombAnimation);
 
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [showPileCounts, setShowPileCounts] = useState(false);
@@ -204,27 +382,66 @@ export function GameScreen(): React.ReactElement {
   // Ref to prevent double-firing of auto-pickup
   const autoPickupPendingRef = useRef(false);
 
+  /* Feature 12 — reset pickupAnimation after the animation completes */
+  useEffect(() => {
+    if (!pickupAnimation) return;
+    const t = setTimeout(() => {
+      useGameStore.setState({ pickupAnimation: false, pickupPlayerId: null });
+    }, PICKUP_ANIM_MS);
+    return () => clearTimeout(t);
+  }, [pickupAnimation]);
+
+  /* Issue 8 — reset bombAnimation after it plays */
+  useEffect(() => {
+    if (!bombAnimation) return;
+    const t = setTimeout(() => {
+      useGameStore.setState({ bombAnimation: false });
+    }, BOMB_ANIM_MS);
+    return () => clearTimeout(t);
+  }, [bombAnimation]);
+
   const opponents = lobbyPlayers.filter((p: LobbyPlayer) => p.id !== currentPlayerId);
   const topPileCard = playPile.length > 0 ? playPile[playPile.length - 1] : null;
   const isYourTurn = !!currentPlayerId && currentTurnPlayerId === currentPlayerId;
 
+  /* Issue 3 — determine pickup animation direction based on who picked up */
+  const pickupDirection: FlyDirection = (() => {
+    if (!pickupPlayerId || pickupPlayerId === currentPlayerId) return 'down';
+    const topOpp  = opponents.slice(0, 3);
+    const sideOpp = opponents.slice(3);
+    const topIdx  = topOpp.findIndex((p) => p.id === pickupPlayerId);
+    if (topIdx >= 0) return 'up';
+    const sideIdx = sideOpp.findIndex((p) => p.id === pickupPlayerId);
+    if (sideIdx >= 0) return sideIdx % 2 === 0 ? 'left' : 'right';
+    return 'up'; // fallback for unknown opponent
+  })();
+
   // Determine which zone is active for card selection
+  const isHandZone = hand.length > 0;
+  const isBlindZone = !isHandZone && tableCards.length === 0 && blindCards.length > 0;
+
+  // Blind cards at slots where no visible card exists are "exposed" and immediately playable.
+  // This supports the rule: playing a visible card reveals the blind card beneath it.
+  const exposedBlindCardIds: Set<string> = !isHandZone
+    ? new Set(blindCards.filter((_, i) => !tableCards[i]).map((c) => c.id))
+    : new Set<string>();
+
   const activeZoneIds = new Set<string>(
-    hand.length > 0
+    isHandZone
       ? hand.map((c: GameCard) => c.id)
-      : tableCards.length > 0
-        ? tableCards.map((c: GameCard) => c.id)
-        : []
+      : [
+          ...tableCards.map((c: GameCard) => c.id),
+          ...Array.from(exposedBlindCardIds),
+        ]
   );
 
-  const isHandZone = hand.length > 0;
-
-  /* Fix E — compute playability for each active zone card */
+  /* Fix E — compute playability for each active zone card; blind cards are always playable */
   const playableIds = new Set<string>(
     Array.from(activeZoneIds).filter((id) => {
+      if (exposedBlindCardIds.has(id)) return true; // blind: always playable (flip and hope)
       const card = hand.find((c) => c.id === id) ?? tableCards.find((c) => c.id === id);
       if (!card) return false;
-      return isCardPlayable(card, playPile, activeConstraints);
+      return isCardPlayable(card, playPile, activeConstraints, bombEnabled);
     })
   );
 
@@ -232,14 +449,19 @@ export function GameScreen(): React.ReactElement {
   const handleSelectCard = (cardId: string): void => {
     if (!activeZoneIds.has(cardId)) return;
 
-    // Respect playability: don't select unplayable cards
-    if (!playableIds.has(cardId) && isYourTurn) return;
+    // Exposed blind cards: single selection only (identity unknown until played)
+    if (exposedBlindCardIds.has(cardId)) {
+      setSelectedCards((prev) => prev.includes(cardId) ? [] : [cardId]);
+      return;
+    }
 
-    const allCards = [...hand, ...tableCards];
-    const clickedCard = allCards.find((c) => c.id === cardId);
+    // Only gate on playability for hand cards — table/blind plays always proceed (fail-pickup handles unbeatable plays)
+    if (isHandZone && !playableIds.has(cardId) && isYourTurn) return;
+
+    const clickedCard = [...hand, ...tableCards].find((c) => c.id === cardId);
     if (!clickedCard) return;
 
-    // For table zone, single selection only (no same-rank stacking per rules)
+    // For table (visible) zone: single selection only
     if (!isHandZone) {
       setSelectedCards((prev) =>
         prev.includes(cardId) ? [] : [cardId]
@@ -247,15 +469,9 @@ export function GameScreen(): React.ReactElement {
       return;
     }
 
-    // Hand zone: auto-select all same-rank playable cards
+    // Hand zone: if this card is already selected, deselect it (one at a time)
     if (selectedCards.includes(cardId)) {
-      // Deselect all of same rank
-      setSelectedCards((prev) =>
-        prev.filter((id) => {
-          const c = allCards.find((card) => card.id === id);
-          return c?.rank !== clickedCard.rank;
-        })
-      );
+      setSelectedCards((prev) => prev.filter((id) => id !== cardId));
       return;
     }
 
@@ -263,14 +479,8 @@ export function GameScreen(): React.ReactElement {
       .filter((c) => c.rank === clickedCard.rank && activeZoneIds.has(c.id) && playableIds.has(c.id))
       .map((c) => c.id);
 
-    setSelectedCards((prev) => {
-      // Remove cards of other ranks, then add all same-rank
-      const otherRanks = prev.filter((id) => {
-        const c = allCards.find((card) => card.id === id);
-        return c && c.rank !== clickedCard.rank;
-      });
-      return [...otherRanks, ...sameRankIds];
-    });
+    // Only keep same-rank cards selected — never mix ranks
+    setSelectedCards(sameRankIds);
   };
 
   const handlePlayCards = async (): Promise<void> => {
@@ -355,6 +565,20 @@ export function GameScreen(): React.ReactElement {
     acc[card.rank] = (acc[card.rank] || 0) + 1;
     return acc;
   }, {});
+
+  /* Feature 7 — grouped hand for display */
+  const groupedHand = groupHandByRank(hand);
+
+  /* Issue 7 — dynamic hand sizing: shrink card groups when there are many ranks */
+  const isCompactHand = groupedHand.length > HAND_COMPACT_THRESHOLD;
+  const handCardW = isCompactHand ? HAND_CARD_W_SM : HAND_CARD_W_DEFAULT;
+  const handCardH = isCompactHand ? HAND_CARD_H_SM : HAND_CARD_H_DEFAULT;
+  const handGap   = isCompactHand ? HAND_GAP_SM : HAND_GAP_DEFAULT;
+  const handCSSVars = {
+    '--hand-card-w': `${handCardW}px`,
+    '--hand-card-h': `${handCardH}px`,
+    '--hand-gap':    `${handGap}px`,
+  } as React.CSSProperties;
 
   /* ── Swap phase: show simplified selection UI ── */
   if (phase === 'swapping' && gameId && currentPlayerId) {
@@ -472,7 +696,7 @@ export function GameScreen(): React.ReactElement {
       )}
 
       {/* ── Center Board ─────────────────────────── */}
-      <div className="gs-board">
+      <div className="gs-board" style={{ position: 'relative' }}>
         <div className="gs-center">
           {/* Fix A — renamed to "Play Pile" */}
           <PileDisplay
@@ -488,6 +712,17 @@ export function GameScreen(): React.ReactElement {
             isDeck
           />
         </div>
+        {/* Feature 12 — pickup pile fly animation (Issue 3: directional) */}
+        {pickupAnimation && <PickupAnimation direction={pickupDirection} />}
+        {/* Issue 8 — bomb flash animation */}
+        {bombAnimation && <BombAnimation />}
+        {/* Issue 5 — blind reveal anchored to the pile area */}
+        {blindReveal !== null && (
+          <BlindRevealOverlay
+            reveal={blindReveal}
+            onDone={() => useGameStore.setState({ blindReveal: null })}
+          />
+        )}
       </div>
 
       {/* ── Player's Table Cards ─────────────────── */}
@@ -495,20 +730,30 @@ export function GameScreen(): React.ReactElement {
         <div className="gs-table-zone">
           <div className="gs-zone-label">Table</div>
           <div className="gs-table-stacks">
-            {blindCards.map((_: GameCard, i: number) => {
+            {blindCards.map((blindCard: GameCard, i: number) => {
               const visibleCard = tableCards[i] ?? null;
-              const isActiveZone = !isHandZone && tableCards.length > 0;
-              const isSelected = isActiveZone && visibleCard && selectedCards.includes(visibleCard.id);
-              const isDisabled = !isActiveZone || !isYourTurn || (visibleCard ? !playableIds.has(visibleCard.id) : true);
+
+              // Visible card: always playable when hand is empty (fail-pickup handles unbeatable plays)
+              const visibleSelected = !isHandZone && !!visibleCard && selectedCards.includes(visibleCard.id);
+              const visibleDisabled = isHandZone || !isYourTurn || !visibleCard;
+
+              // Blind card: selectable when hand is empty and no visible card covers this slot
+              const isThisBlindExposed = exposedBlindCardIds.has(blindCard.id);
+              const blindSelected = isThisBlindExposed && selectedCards.includes(blindCard.id);
+              const blindPlayDisabled = !isThisBlindExposed || !isYourTurn;
+
               return (
                 <div key={i} className="gs-table-slot" aria-label={`Table slot ${i + 1}`}>
-                  {/* Blind card — base of stack */}
+                  {/* Blind card — base of stack; clickable once all visible cards are gone */}
                   <Card
                     faceDown
                     size="sm"
+                    selected={blindSelected}
+                    disabled={blindPlayDisabled}
+                    onClick={(!blindPlayDisabled && !visibleCard) ? () => handleSelectCard(blindCard.id) : undefined}
                     className="gs-table-slot__blind animate-slide-up"
                     style={{ animationDelay: `${i * 30}ms` }}
-                    aria-label="Blind card"
+                    aria-label={isBlindZone && !visibleCard ? 'Blind card — click to play' : 'Blind card'}
                   />
                   {/* Visible card — rests on top of blind */}
                   {visibleCard && (
@@ -516,9 +761,9 @@ export function GameScreen(): React.ReactElement {
                       rank={visibleCard.rank}
                       suit={visibleCard.suit}
                       size="sm"
-                      selected={!!isSelected}
-                      disabled={isDisabled}
-                      onClick={!isDisabled ? () => handleSelectCard(visibleCard.id) : undefined}
+                      selected={!!visibleSelected}
+                      disabled={visibleDisabled}
+                      onClick={!visibleDisabled ? () => handleSelectCard(visibleCard.id) : undefined}
                       className="gs-table-slot__visible animate-slide-up"
                       style={{ animationDelay: `${i * 30 + 15}ms` }}
                       aria-label={`${visibleCard.rank} of ${visibleCard.suit}, table card`}
@@ -537,27 +782,81 @@ export function GameScreen(): React.ReactElement {
           <span className="gs-zone-label">Hand</span>
           <span className="gs-hand-count">{hand.length} cards</span>
         </div>
-        <div className="gs-hand-cards" role="group" aria-label="Your cards">
+        {/* Issue 7 — inject CSS vars so groups and gap shrink when hand is full */}
+        <div className="gs-hand-cards" style={handCSSVars} role="group" aria-label="Your cards">
           {hand.length === 0 ? (
             <p className="gs-hand-empty">No cards in hand</p>
           ) : (
-            hand.map((card: GameCard, i: number) => {
-              const isSelected = selectedCards.includes(card.id);
-              const isPlayable = playableIds.has(card.id);
-              const isDisabled = !isYourTurn || !isPlayable;
+            /* Feature 7 — render grouped stacks instead of individual cards */
+            groupedHand.map((group, gi) => {
+              const selectedCount = group.cards.filter((c) => selectedCards.includes(c.id)).length;
+              const isGroupSelected = selectedCount > 0;
+              const hasMultiple = group.cards.length > 1;
+
+              // Show at most 3 cards in the fan (visual only)
+              const visibleFanCards = group.cards.slice(0, 3);
+              // The "front" card is the last one — clicking it deselects one at a time
+              const frontCard = group.cards[group.cards.length - 1];
+              // Issue 7: compact card size when many groups
+              const cardSize = isCompactHand ? 'sm' : 'md';
+
+              const isGroupDisabled = !isYourTurn || !playableIds.has(frontCard.id);
+
               return (
-                <Card
-                  key={card.id}
-                  rank={card.rank}
-                  suit={card.suit}
-                  size="md"
-                  selected={isSelected}
-                  disabled={isDisabled}
-                  onClick={!isDisabled ? () => handleSelectCard(card.id) : undefined}
-                  className="gs-hand-card animate-slide-up"
-                  style={{ animationDelay: `${i * 20}ms` }}
-                  aria-label={`${card.rank} of ${card.suit}${isSelected ? ', selected' : ''}${isDisabled ? ', not playable' : ''}`}
-                />
+                <div
+                  key={group.rank}
+                  className={`gs-hand-group animate-slide-up ${isGroupSelected ? 'gs-hand-group--selected' : ''} ${isGroupDisabled ? 'gs-hand-group--disabled' : ''}`}
+                  style={{ animationDelay: `${gi * 30}ms` }}
+                  role="group"
+                  aria-label={`${group.rank} — ${group.cards.length} card${group.cards.length !== 1 ? 's' : ''}${isGroupSelected ? `, ${selectedCount} selected` : ''}`}
+                >
+                  {/* Fan cards behind — non-interactive visual only */}
+                  {visibleFanCards.slice(0, -1).map((card) => {
+                    const isSelected = selectedCards.includes(card.id);
+                    const isPlayable = playableIds.has(card.id);
+                    const isDisabled = !isYourTurn || !isPlayable;
+                    return (
+                      <Card
+                        key={card.id}
+                        rank={card.rank}
+                        suit={card.suit}
+                        size={cardSize}
+                        selected={isSelected}
+                        disabled={isDisabled}
+                        onClick={!isDisabled ? () => handleSelectCard(card.id) : undefined}
+                        className="gs-hand-group__card"
+                        aria-hidden="true"
+                      />
+                    );
+                  })}
+
+                  {/* Front card — interactive, clicking deselects one at a time */}
+                  {(() => {
+                    const isSelected = selectedCards.includes(frontCard.id);
+                    const isPlayable = playableIds.has(frontCard.id);
+                    const isDisabled = !isYourTurn || !isPlayable;
+                    return (
+                      <Card
+                        key={frontCard.id}
+                        rank={frontCard.rank}
+                        suit={frontCard.suit}
+                        size={cardSize}
+                        selected={isSelected}
+                        disabled={isDisabled}
+                        onClick={!isDisabled ? () => handleSelectCard(frontCard.id) : undefined}
+                        className="gs-hand-group__card"
+                        aria-label={`${frontCard.rank} of ${frontCard.suit}${isSelected ? ', selected' : ''}${isDisabled ? ', not playable' : ''}`}
+                      />
+                    );
+                  })()}
+
+                  {/* Count badge — only when 2+ cards of this rank */}
+                  {hasMultiple && (
+                    <span className="gs-hand-group__badge" aria-hidden="true">
+                      ×{group.cards.length}
+                    </span>
+                  )}
+                </div>
               );
             })
           )}

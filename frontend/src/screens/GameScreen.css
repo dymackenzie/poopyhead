@@ -119,6 +119,14 @@
   border-bottom: 2px solid var(--border-soft);
   min-height: 38px;
   flex-shrink: 0;
+  transition: background 200ms ease-out, border-color 200ms ease-out;
+}
+
+/* Feature 5 — strong "your turn" state */
+.gs-turn-banner--you {
+  background: #F5A623;
+  border-bottom-color: #D4891A;
+  /* Issue 1: pulse animation removed — the yellow bg is sufficient signal */
 }
 
 .gs-constraint-badge {
@@ -142,15 +150,19 @@
 }
 
 .gs-turn-banner--you .gs-turn-label {
-  color: var(--color-black);
+  font-size: var(--font-base);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #0A0A0A;
 }
 
 .gs-turn-dot {
-  width: 7px;
-  height: 7px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: var(--accent-yellow);
+  background: #0A0A0A;
   animation: glowPulse 1.4s ease-in-out infinite;
+  flex-shrink: 0;
 }
 
 /* ── Opponents Top Row ───────────────────────── */
@@ -172,10 +184,6 @@
   gap: var(--space-2);
 }
 
-.gs-opponent--active .gs-opponent-label {
-  background: rgba(245,166,35,0.12);
-  border-color: rgba(245,166,35,0.5);
-}
 
 .gs-opponent-cards {
   display: flex;
@@ -193,20 +201,12 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 3px var(--space-2);
-  background: var(--bg-surface);
-  border: 1.5px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  max-width: 90px;
-}
-
-.gs-opponent-label--active {
-  border-color: var(--accent-yellow);
+  padding: 2px 0;
 }
 
 .gs-active-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--accent-yellow);
   flex-shrink: 0;
@@ -214,20 +214,24 @@
 }
 
 .gs-opponent-name {
-  font-size: var(--font-xs);
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 56px;
+  max-width: 64px;
 }
 
 .gs-opponent-count {
-  font-size: var(--font-xs);
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+.gs-opponent-label--active .gs-opponent-name {
+  color: var(--accent-yellow);
 }
 
 /* ── Opponent Table Cards ────────────────────── */
@@ -379,7 +383,8 @@
 
 .gs-hand-cards {
   display: flex;
-  gap: var(--space-2);
+  /* Issue 7: use gap var that shrinks with many cards */
+  gap: var(--hand-gap, var(--space-2));
   overflow-x: auto;
   overflow-y: visible;
   padding-bottom: var(--space-2);
@@ -387,6 +392,8 @@
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
+  /* Allow groups to shrink to fit container */
+  flex-wrap: nowrap;
 }
 
 .gs-hand-cards::-webkit-scrollbar {
@@ -575,4 +582,211 @@
   font-size: 0.9rem;
   color: var(--text-secondary);
   font-weight: 600;
+}
+
+/* =============================================
+   Feature 7 — Hand Card Groups
+   ============================================= */
+
+/*
+ * Each rank group is a relative container. Cards stack with
+ * slight offsets to give a "fanned stack" look.
+ * The badge floats above the front card.
+ */
+/* Issue 7: group width/height driven by --card-w / --card-h CSS vars set inline
+   when the hand has many groups. Defaults match the md card size (58×82). */
+.gs-hand-group {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--hand-card-w, 58px);
+  height: var(--hand-card-h, 98px);
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Individual cards within a group are absolutely stacked */
+.gs-hand-group__card {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+/* Issue 2: fan (behind) cards must always be fully opaque — disabled opacity
+   only applies to the front (last) card via :last-child. Back cards are locked
+   to opacity:1 so they look like a solid stack, not ghosted through each other. */
+.gs-hand-group__card:nth-child(3) { transform: translate(-3px, -4px) rotate(-3deg); }
+.gs-hand-group__card:nth-child(2) { transform: translate(-1px, -2px) rotate(-1deg); }
+.gs-hand-group__card:nth-child(1) { transform: translate(0, 0) rotate(0deg); }
+
+/* Dim the whole group as one unit — no per-card opacity so no see-through layering */
+.gs-hand-group--disabled {
+  opacity: 0.4 !important;
+}
+
+.gs-hand-group--disabled .gs-hand-group__card {
+  opacity: 1 !important;
+}
+
+/* Keep selected state on front card visible above stagger */
+.gs-hand-group__card.ph-card--selected {
+  z-index: 10;
+}
+
+/* Count badge — floats top-right of the group */
+.gs-hand-group__badge {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+  z-index: 20;
+  background: #0A0A0A;
+  color: #FFFFFF;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid #FFFFFF;
+  pointer-events: none;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* When any card in the group is selected, tint the badge */
+.gs-hand-group--selected .gs-hand-group__badge {
+  background: var(--accent-yellow);
+  color: #0A0A0A;
+  border-color: #0A0A0A;
+}
+
+/* =============================================
+   Feature 11 — Blind Card Reveal (Issue 5: pile-anchored)
+   ============================================= */
+
+/*
+ * Rendered inside .gs-board (position:relative) — absolutely centered
+ * over the pile area rather than fixed full-screen.
+ * A semi-transparent backdrop covers just the board zone.
+ */
+.gs-blind-pile-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  background: rgba(10, 10, 10, 0.72);
+  border-radius: var(--radius-md);
+  animation: blind-overlay-in 180ms ease-out both;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  pointer-events: none; /* let taps fall through so game doesn't block */
+}
+
+/* Wrapper — perspective for 3D flip */
+.gs-blind-overlay__card-wrap {
+  perspective: 600px;
+  will-change: transform;
+}
+
+/* The card itself gets the flip animation */
+.gs-blind-overlay__card-wrap--flipping-out .ph-card {
+  animation: blind-flip-out 200ms ease-in forwards;
+}
+
+.gs-blind-overlay__card-wrap--flipping-in .ph-card {
+  animation: blind-flip-in 200ms ease-out both;
+}
+
+/* Glow rings post-flip */
+.gs-blind-overlay__card-wrap--success .ph-card {
+  animation: blind-glow-success 1.2s ease-out 200ms both;
+}
+
+.gs-blind-overlay__card-wrap--fail .ph-card {
+  animation: blind-glow-fail 1.2s ease-out 200ms both;
+}
+
+/* Result text — smaller since it's in the board zone now */
+.gs-blind-overlay__result {
+  font-size: var(--font-lg);
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  animation: blind-result-in 280ms cubic-bezier(0.34, 1.56, 0.64, 1) 600ms both;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+.gs-blind-overlay__result--success {
+  color: #34C759;
+}
+
+.gs-blind-overlay__result--fail {
+  color: #FF3B3B;
+}
+
+/* =============================================
+   Feature 12 — Pickup Pile Fly Animation
+   ============================================= */
+
+.gs-pickup-animation {
+  position: absolute;
+  /* Positioned relative to .gs-board (which must be position:relative) */
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+  overflow: visible;
+}
+
+.gs-pickup-fly-card {
+  position: absolute;
+  /* Centered on the pile area */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 38px;
+  height: 54px;
+  border-radius: var(--card-radius);
+  background: var(--card-back);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: var(--card-shadow);
+  /* Issue 3: fly-to-hand now uses --fly-y from the component */
+  animation: fly-to-hand 0.7s ease-in forwards;
+  will-change: transform, opacity;
+}
+
+/* =============================================
+   Issue 8 — Bomb Burst Animation
+   ============================================= */
+
+.gs-bomb-animation {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Main burst circle */
+.gs-bomb-burst {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,204,0,0.85) 0%, rgba(255,100,0,0.6) 40%, transparent 70%);
+  animation: bomb-burst 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+/* Expanding ring (pseudo-element) */
+.gs-bomb-burst::after {
+  content: '';
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,204,0,0.7);
+  animation: bomb-ring 0.55s ease-out forwards;
+  will-change: transform, opacity;
 }

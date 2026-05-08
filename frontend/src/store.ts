@@ -11,6 +11,11 @@ export type GamePlayer = LobbyPlayer;
 
 export type GameStatus = 'lobby' | 'playing' | 'ended' | 'rematch';
 
+export interface BlindReveal {
+  card: GameCard;
+  success: boolean;
+}
+
 export interface GameState {
   // Connection & Session
   connected: boolean;
@@ -35,12 +40,21 @@ export interface GameState {
   tableCards: GameCard[];
   blindCards: GameCard[];
   playPile: GameCard[];
+  bombEnabled: boolean;
   currentPlayerUsername?: string;
   /** Player ID of whoever's turn it currently is */
   currentTurnPlayerId?: string;
   playableCards: string[];
   deckCount: number;
   activeConstraints: { sevenOrUnder: boolean; skipCount: number };
+  /** Set when a blind card is played — triggers cinematic reveal overlay */
+  blindReveal: BlindReveal | null;
+  /** Set true when any player picks up the pile — triggers fly animation */
+  pickupAnimation: boolean;
+  /** Player ID of whoever picked up the pile (for directional animation) */
+  pickupPlayerId: string | null;
+  /** Set true momentarily when a bomb clears the pile */
+  bombAnimation: boolean;
 
   // Actions
   connect: () => void;
@@ -68,9 +82,14 @@ export const useGameStore = create<GameState>((set) => ({
   tableCards: [],
   blindCards: [],
   playPile: [],
+  bombEnabled: true,
   playableCards: [],
   deckCount: 0,
   activeConstraints: { sevenOrUnder: false, skipCount: 0 },
+  blindReveal: null,
+  pickupAnimation: false,
+  pickupPlayerId: null,
+  bombAnimation: false,
 
   // Actions
   connect: () => set({ connected: true }),
