@@ -392,9 +392,12 @@ function handlePlayCard(
       const finalGame = endGame(updatedGame, endCheck.loserId!);
       ns.games.set(data.gameId, finalGame);
 
+      const loserPlayer = updatedGame.players.find((p: any) => p.id === endCheck.loserId);
       io.to(`lobby:${game.lobbyCode}`).emit('gameEnded', {
         loserId: endCheck.loserId,
-        loserUsername: updatedGame.players.find((p: any) => p.id === endCheck.loserId)?.username,
+        loserUsername: loserPlayer?.username,
+        loserTableCards: loserPlayer?.tableVisible ?? [],
+        loserBlindCards: loserPlayer?.tableBlind ?? [],
       });
     }
 

@@ -188,6 +188,9 @@ export function App(): React.ReactElement {
         const applyEnded = (): void => {
           useGameStore.setState((state) => ({
             gameStatus: 'ended',
+            loserId: data.loserId,
+            loserTableCards: data.loserTableCards ?? [],
+            loserBlindCards: data.loserBlindCards ?? [],
             lobbyPlayers: state.lobbyPlayers.map((player: GamePlayer) =>
               player.id === data.loserId
                 ? { ...player, cardsRemaining: Number.MAX_SAFE_INTEGER }

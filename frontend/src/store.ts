@@ -59,6 +59,11 @@ export interface GameState {
   /** Set true momentarily when a bomb clears the pile */
   bombAnimation: boolean;
 
+  // Endgame
+  loserId?: string;
+  loserTableCards: GameCard[];
+  loserBlindCards: GameCard[];
+
   // Actions
   connect: () => void;
   disconnect: () => void;
@@ -94,6 +99,8 @@ export const useGameStore = create<GameState>((set) => ({
   pickupAnimation: false,
   pickupPlayerId: null,
   bombAnimation: false,
+  loserTableCards: [],
+  loserBlindCards: [],
 
   // Actions
   connect: () => set({ connected: true }),

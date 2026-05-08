@@ -1,5 +1,5 @@
 /* =============================================
-   Endgame Screen — Light Mode, Dramatic + Playful
+   Endgame Screen
    ============================================= */
 
 @keyframes poopBounce {
@@ -14,12 +14,6 @@
   40%       { transform: rotate(3deg); }
   60%       { transform: rotate(-2deg); }
   80%       { transform: rotate(2deg); }
-}
-
-@keyframes medalPop {
-  0%   { transform: scale(0) rotate(-15deg); opacity: 0; }
-  70%  { transform: scale(1.15) rotate(3deg); opacity: 1; }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
 .endgame-screen {
@@ -74,7 +68,6 @@
   text-transform: uppercase;
 }
 
-/* Loser badge — the star of the show */
 .endgame-loser-badge {
   display: inline-flex;
   align-items: center;
@@ -108,14 +101,9 @@
   color: var(--accent-red);
 }
 
-/* ── Standings ───────────────────────────────── */
+/* ── Shared section label ────────────────────── */
 
-.endgame-standings {
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 2px solid var(--border-soft);
-}
-
-.endgame-standings-title {
+.endgame-section-label {
   font-size: var(--font-xs);
   font-weight: 700;
   text-transform: uppercase;
@@ -124,67 +112,46 @@
   margin-bottom: var(--space-3);
 }
 
-.endgame-standings-list {
+/* ── Players list ────────────────────────────── */
+
+.endgame-players {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 2px solid var(--border-soft);
+}
+
+.endgame-players-list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
-.endgame-row {
-  display: grid;
-  grid-template-columns: 40px 1fr auto;
+.endgame-player-row {
+  display: flex;
   align-items: center;
-  gap: var(--space-2);
+  justify-content: space-between;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-sm);
   border: 2px solid transparent;
   background: var(--bg-surface-2);
-  transition: background 150ms ease-out;
 }
 
-.endgame-row--me {
+.endgame-player-row--me {
   background: var(--bg-elevated);
   border-color: var(--color-black);
 }
 
-.endgame-row--loser {
+.endgame-player-row--loser {
   background: rgba(232,51,42,0.05);
   border-color: rgba(232,51,42,0.25);
 }
 
-/* First place gets a special treatment */
-.endgame-row:first-child {
-  background: rgba(245,166,35,0.08);
-  border-color: rgba(245,166,35,0.35);
-}
-
-.endgame-row-place {
-  font-size: var(--font-xs);
-  font-weight: 900;
-  color: var(--text-muted);
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.endgame-row:first-child .endgame-row-place {
-  color: var(--accent-yellow);
-  font-size: 16px;
-  animation: medalPop 400ms cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both;
-}
-
-.endgame-row--loser .endgame-row-place {
-  color: var(--accent-red);
-}
-
-.endgame-row-name {
+.endgame-player-name {
   font-size: var(--font-sm);
   font-weight: 700;
   color: var(--text-primary);
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  overflow: hidden;
 }
 
 .endgame-you-tag {
@@ -200,17 +167,39 @@
   flex-shrink: 0;
 }
 
-.endgame-row-cards {
-  font-size: var(--font-xs);
-  font-weight: 700;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
 .endgame-poop-badge {
   font-size: 18px;
   display: inline-block;
   animation: poopBounce 2.2s ease-in-out 1.2s infinite;
+}
+
+/* ── Loser remaining cards ───────────────────── */
+
+.endgame-loser-cards {
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 2px solid var(--border-soft);
+}
+
+.endgame-card-group {
+  margin-top: var(--space-3);
+}
+
+.endgame-card-group:first-child {
+  margin-top: 0;
+}
+
+.endgame-card-group-label {
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+  letter-spacing: 0.06em;
+}
+
+.endgame-card-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 /* ── Actions ─────────────────────────────────── */

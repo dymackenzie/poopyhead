@@ -7,7 +7,7 @@
 /// <reference types="vite/client" />
 
 import { io, Socket } from 'socket.io-client';
-import type { GameStatePatch, LobbyResponse, LobbySettings, PlayerJoinedPayload, PlayerReadyPayload, ReadyResponse } from './types/game';
+import type { GameCard, GameStatePatch, LobbyResponse, LobbySettings, PlayerJoinedPayload, PlayerReadyPayload, ReadyResponse } from './types/game';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -24,7 +24,7 @@ export function initSocket(callbacks: {
   onCardPlayed?: (data: GameStatePatch) => void;
   onPlayerJoined?: (data: PlayerJoinedPayload) => void;
   onPlayerReady?: (data: PlayerReadyPayload) => void;
-  onGameEnded?: (data: { loserId: string; loserUsername: string }) => void;
+  onGameEnded?: (data: { loserId: string; loserUsername: string; loserTableCards: GameCard[]; loserBlindCards: GameCard[] }) => void;
   onSwapUpdate?: (data: GameStatePatch) => void;
   onPilePicked?: (data: unknown) => void;
   onDebugStateSync?: (data: unknown) => void;
@@ -62,7 +62,7 @@ export function initSocket(callbacks: {
     callbacks.onCardPlayed?.(data);
   });
 
-  socket.on('gameEnded', (data: { loserId: string; loserUsername: string }) => {
+  socket.on('gameEnded', (data: { loserId: string; loserUsername: string; loserTableCards: GameCard[]; loserBlindCards: GameCard[] }) => {
     callbacks.onGameEnded?.(data);
   });
 

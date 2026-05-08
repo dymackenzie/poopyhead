@@ -1,37 +1,28 @@
-/**
- * Endgame Screen
- */
-
 import React from 'react';
 import { useGameStore } from '../store';
 import { requestRematch } from '../socketClient';
 import Button from '../components/Button';
+import Card from '../components/Card';
 import './EndgameScreen.css';
 import type { GamePlayer } from '../store';
 
-const PLACE_LABELS = ['1st', '2nd', '3rd', '4th', '5th', '6th'];
-
 export function EndgameScreen(): React.ReactElement {
-  const gameStatus   = useGameStore((s) => s.gameStatus);
-  const lobbyPlayers = useGameStore((s) => s.lobbyPlayers);
+  const gameStatus      = useGameStore((s) => s.gameStatus);
+  const lobbyPlayers    = useGameStore((s) => s.lobbyPlayers);
   const currentPlayerId = useGameStore((s) => s.currentPlayerId);
-  const lobbyCode = useGameStore((s) => s.lobbyCode);
+  const lobbyCode       = useGameStore((s) => s.lobbyCode);
+  const loserId         = useGameStore((s) => s.loserId);
+  const loserTableCards = useGameStore((s) => s.loserTableCards);
+  const loserBlindCards = useGameStore((s) => s.loserBlindCards);
 
-  const standings = [...lobbyPlayers].sort((a: GamePlayer, b: GamePlayer) => {
-    const aCards = a.cardsRemaining ?? Number.MAX_SAFE_INTEGER;
-    const bCards = b.cardsRemaining ?? Number.MAX_SAFE_INTEGER;
-    return aCards - bCards;
-  });
-
-  const loser = standings[standings.length - 1];
-  const isYouLoser = loser?.id === currentPlayerId;
+  const loser     = lobbyPlayers.find((p: GamePlayer) => p.id === loserId);
+  const isYouLoser = loserId === currentPlayerId;
 
   const handleRematch = async (): Promise<void> => {
     if (!lobbyCode) return;
     useGameStore.setState({ gameStatus: 'rematch' });
     const result = await requestRematch(lobbyCode) as any;
     if (!result?.success) {
-      // Revert spinner if server rejected (e.g. another player already triggered it)
       useGameStore.setState({ gameStatus: 'ended' });
     }
   };
@@ -41,6 +32,9 @@ export function EndgameScreen(): React.ReactElement {
       gameStatus: 'lobby',
       lobbyCode: undefined,
       gameId: undefined,
+      loserId: undefined,
+      loserTableCards: [],
+      loserBlindCards: [],
       hand: [],
       tableCards: [],
       blindCards: [],
@@ -63,6 +57,8 @@ export function EndgameScreen(): React.ReactElement {
     );
   }
 
+  const hasLoserCards = loserTableCards.length > 0 || loserBlindCards.length > 0;
+
   return (
     <div className="endgame-screen">
       <div className="endgame-panel animate-scale-in">
@@ -81,41 +77,65 @@ export function EndgameScreen(): React.ReactElement {
           )}
         </div>
 
-        {/* Standings */}
-        {standings.length > 0 && (
-          <div className="endgame-standings">
-            <div className="endgame-standings-title">Final Standings</div>
-            <div className="endgame-standings-list">
-              {standings.map((player: GamePlayer, index: number) => {
-                const isLast = index === standings.length - 1;
-                const isMe = player.id === currentPlayerId;
+        {/* Players */}
+        {lobbyPlayers.length > 0 && (
+          <div className="endgame-players">
+            <div className="endgame-section-label">Players</div>
+            <div className="endgame-players-list">
+              {lobbyPlayers.map((player: GamePlayer) => {
+                const isLoser = player.id === loserId;
+                const isMe    = player.id === currentPlayerId;
                 return (
                   <div
                     key={player.id}
                     className={[
-                      'endgame-row',
-                      isLast ? 'endgame-row--loser' : '',
-                      isMe   ? 'endgame-row--me'    : '',
-                      'animate-slide-in',
+                      'endgame-player-row',
+                      isLoser ? 'endgame-player-row--loser' : '',
+                      isMe    ? 'endgame-player-row--me'    : '',
                     ].filter(Boolean).join(' ')}
-                    style={{ animationDelay: `${index * 60}ms` }}
                   >
-                    <span className="endgame-row-place">{PLACE_LABELS[index] ?? `#${index + 1}`}</span>
-                    <span className="endgame-row-name">
+                    <span className="endgame-player-name">
                       {player.username}
                       {isMe && <span className="endgame-you-tag">you</span>}
                     </span>
-                    <span className="endgame-row-cards">
-                      {isLast ? (
-                        <span className="endgame-poop-badge" title="Poopyhead">&#128169;</span>
-                      ) : (
-                        `${player.cardsRemaining ?? 0} cards`
-                      )}
-                    </span>
+                    {isLoser && (
+                      <span className="endgame-poop-badge" aria-hidden="true">&#128169;</span>
+                    )}
                   </div>
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Loser's remaining cards */}
+        {hasLoserCards && (
+          <div className="endgame-loser-cards">
+            <div className="endgame-section-label">
+              {isYouLoser ? 'Your' : `${loser?.username ?? 'Their'}`} remaining cards
+            </div>
+
+            {loserTableCards.length > 0 && (
+              <div className="endgame-card-group">
+                <div className="endgame-card-group-label">Table cards</div>
+                <div className="endgame-card-row">
+                  {loserTableCards.map((card) => (
+                    <Card key={card.id} rank={card.rank} suit={card.suit} size="sm" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {loserBlindCards.length > 0 && (
+              <div className="endgame-card-group">
+                <div className="endgame-card-group-label">Blind cards — revealed</div>
+                <div className="endgame-card-row">
+                  {loserBlindCards.map((card) => (
+                    <Card key={card.id} rank={card.rank} suit={card.suit} size="sm" />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
