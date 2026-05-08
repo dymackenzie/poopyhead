@@ -14,6 +14,7 @@ export type GameStatus = 'lobby' | 'playing' | 'ended' | 'rematch';
 export interface BlindReveal {
   card: GameCard;
   success: boolean;
+  slotIndex: number;
 }
 
 export interface GameState {
@@ -47,8 +48,10 @@ export interface GameState {
   playableCards: string[];
   deckCount: number;
   activeConstraints: { sevenOrUnder: boolean; skipCount: number };
-  /** Set when a blind card is played — triggers cinematic reveal overlay */
+  /** Set when a blind card is played — triggers in-place reveal at the slot */
   blindReveal: BlindReveal | null;
+  /** Tracks which slot index the currently-selected blind card occupies */
+  pendingBlindSlotIndex: number | null;
   /** Set true when any player picks up the pile — triggers fly animation */
   pickupAnimation: boolean;
   /** Player ID of whoever picked up the pile (for directional animation) */
@@ -87,6 +90,7 @@ export const useGameStore = create<GameState>((set) => ({
   deckCount: 0,
   activeConstraints: { sevenOrUnder: false, skipCount: 0 },
   blindReveal: null,
+  pendingBlindSlotIndex: null,
   pickupAnimation: false,
   pickupPlayerId: null,
   bombAnimation: false,

@@ -27,6 +27,7 @@ export function initSocket(callbacks: {
   onGameEnded?: (data: { loserId: string; loserUsername: string }) => void;
   onSwapUpdate?: (data: GameStatePatch) => void;
   onPilePicked?: (data: unknown) => void;
+  onDebugStateSync?: (data: unknown) => void;
 }): Socket {
   socket = io(SOCKET_URL, {
     reconnection: true,
@@ -71,6 +72,10 @@ export function initSocket(callbacks: {
 
   socket.on('pilePicked', (data: unknown) => {
     callbacks.onPilePicked?.(data);
+  });
+
+  socket.on('debugStateSync', (data: unknown) => {
+    callbacks.onDebugStateSync?.(data);
   });
 
   socket.on('playerReconnected', (data: PlayerJoinedPayload) => {
@@ -176,6 +181,24 @@ export function pickupPile(gameId: string, playerId: string): Promise<unknown> {
 export function reconnectSession(sessionId: string, gameId: string): Promise<unknown> {
   return new Promise((resolve) => {
     emitEvent('reconnect', { sessionId, gameId }, resolve);
+  });
+}
+
+/**
+ * Request a rematch in the same lobby.
+ */
+export function requestRematch(code: string): Promise<unknown> {
+  return new Promise((resolve) => {
+    emitEvent('rematch', { code }, resolve);
+  });
+}
+
+/**
+ * Debug: auto-play turns until the draw pile is empty.
+ */
+export function debugAutoPlay(gameId: string): Promise<unknown> {
+  return new Promise((resolve) => {
+    emitEvent('debugAutoPlay', { gameId }, resolve);
   });
 }
 

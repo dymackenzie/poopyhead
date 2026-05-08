@@ -68,6 +68,12 @@ export function App(): React.ReactElement {
             totalPlayers: game.players.length,
             currentPlayerUsername: dataAny.currentTurnPlayerUsername,
             currentTurnPlayerId: dataAny.currentTurnPlayerId,
+            deckCount: game.deck?.length ?? 0,
+            activeConstraints: { sevenOrUnder: false, skipCount: 0 },
+            blindReveal: null,
+            pickupAnimation: false,
+            pickupPlayerId: null,
+            bombAnimation: false,
           });
         } else {
           updateGameState({ gameStatus: 'playing', ...data });
@@ -130,9 +136,11 @@ export function App(): React.ReactElement {
           lobbyPlayers: updatedLobbyPlayers,
         };
 
-        // Blind card cinematic reveal — success = card stayed, pile was not picked up
+        // Blind card in-place reveal — success = card stayed, pile was not picked up
         if (dataAny.isBlindPlay === true && dataAny.revealedCard != null) {
-          patch.blindReveal = { card: dataAny.revealedCard, success: true };
+          const { pendingBlindSlotIndex } = useGameStore.getState();
+          patch.blindReveal = { card: dataAny.revealedCard, success: true, slotIndex: pendingBlindSlotIndex ?? 0 };
+          patch.pendingBlindSlotIndex = null;
         }
 
         // Issue 8 — bomb animation: fire when the pile was just cleared by a bomb
@@ -164,16 +172,18 @@ export function App(): React.ReactElement {
           pickupPlayerId: dataAny.playerId ?? dataAny.pickupPlayerId ?? null,
         };
 
-        // Blind card that failed — show cinematic reveal with failure state
+        // Blind card that failed — show in-place reveal with failure state
         if ((dataAny.isBlindPlay === true || dataAny.blindFail === true) && dataAny.revealedCard != null) {
-          patch.blindReveal = { card: dataAny.revealedCard, success: false };
+          const { pendingBlindSlotIndex } = useGameStore.getState();
+          patch.blindReveal = { card: dataAny.revealedCard, success: false, slotIndex: pendingBlindSlotIndex ?? 0 };
+          patch.pendingBlindSlotIndex = null;
         }
 
         useGameStore.setState(patch);
       },
       onGameEnded: (data) => {
-        // Issue 6 — if a blind reveal is in progress, wait for it to finish before transitioning
-        const BLIND_TOTAL_MS = 3200;
+        // Wait for inline blind reveal to finish before transitioning
+        const BLIND_TOTAL_MS = 1500;
         const { blindReveal } = useGameStore.getState();
         const applyEnded = (): void => {
           useGameStore.setState((state) => ({
@@ -191,6 +201,30 @@ export function App(): React.ReactElement {
         } else {
           applyEnded();
         }
+      },
+      onDebugStateSync: (data) => {
+        const dataAny = data as any;
+        const { currentPlayerId, lobbyPlayers } = useGameStore.getState();
+        const game = dataAny.game as any;
+        const me = game?.players?.find((p: any) => p.id === currentPlayerId);
+
+        const updatedLobbyPlayers = lobbyPlayers.map((player: GamePlayer) => {
+          const pub = dataAny.players?.find((p: any) => p.id === player.id);
+          if (!pub) return player;
+          return { ...player, cardsInHand: pub.cardsInHand, tableVisible: pub.tableVisible, tableBlindCount: pub.tableBlindCount };
+        });
+
+        useGameStore.setState({
+          hand: me?.hand || [],
+          tableCards: me?.tableVisible || [],
+          blindCards: me?.tableBlind || [],
+          playPile: game?.playPile || [],
+          deckCount: dataAny.deckCount ?? 0,
+          currentTurnPlayerId: dataAny.currentTurnPlayerId,
+          currentPlayerUsername: dataAny.currentTurnPlayerUsername,
+          activeConstraints: game?.activeConstraints ?? { sevenOrUnder: false, skipCount: 0 },
+          lobbyPlayers: updatedLobbyPlayers,
+        });
       },
     });
   }, []);

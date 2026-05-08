@@ -12,7 +12,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store';
-import { playCards, swapCards, pickupPile } from '../socketClient';
+import { playCards, swapCards, pickupPile, debugAutoPlay } from '../socketClient';
 import type { GameState, BlindReveal } from '../store';
 import Card from '../components/Card';
 import PileDisplay from '../components/PileDisplay';
@@ -32,10 +32,11 @@ const RANK_VALUES: Record<string, number> = {
 const AUTO_PICKUP_DELAY_MS = 600;
 const PILE_COUNTS_DISMISS_MS = 2500;
 
-// Feature 11 — blind reveal timing (ms)
-const BLIND_FLIP_START_MS  = 400;   // delay before flip begins (reduced for pile-anchored feel)
-const BLIND_FLIP_DUR_MS    = 400;   // flip animation duration (out + in)
-const BLIND_TOTAL_MS       = 2800;  // total overlay lifetime
+// Inline blind reveal timing (ms)
+const INLINE_FLIP_DELAY = 100;
+const INLINE_FLIP_HALF  = 150;
+const INLINE_HOLD       = 700;
+const INLINE_FADE       = 300;
 
 // Feature 12 — pickup animation lifetime
 const PICKUP_ANIM_MS = 800;
@@ -139,53 +140,44 @@ interface BlindRevealOverlayProps {
   onDone: () => void;
 }
 
-function BlindRevealOverlay({ reveal, onDone }: BlindRevealOverlayProps): React.ReactElement {
-  // Phase: 'back' → show face-down; 'front' → show face-up after flip
-  const [phase, setPhase] = useState<'back' | 'flipping-out' | 'flipping-in' | 'front'>('back');
+function InlineBlindReveal({ reveal, onDone }: BlindRevealOverlayProps): React.ReactElement {
+  const [phase, setPhase] = useState<'back' | 'flipping-out' | 'flipping-in' | 'front' | 'fade'>('back');
 
   useEffect(() => {
-    // After delay, start the two-phase flip
-    const t1 = setTimeout(() => setPhase('flipping-out'), BLIND_FLIP_START_MS);
-    const t2 = setTimeout(() => setPhase('flipping-in'), BLIND_FLIP_START_MS + BLIND_FLIP_DUR_MS / 2);
-    const t3 = setTimeout(() => setPhase('front'), BLIND_FLIP_START_MS + BLIND_FLIP_DUR_MS);
-    const t4 = setTimeout(onDone, BLIND_TOTAL_MS);
-
-    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+    const t1 = setTimeout(() => setPhase('flipping-out'), INLINE_FLIP_DELAY);
+    const t2 = setTimeout(() => setPhase('flipping-in'),  INLINE_FLIP_DELAY + INLINE_FLIP_HALF);
+    const t3 = setTimeout(() => setPhase('front'),        INLINE_FLIP_DELAY + INLINE_FLIP_HALF * 2);
+    const t4 = setTimeout(() => setPhase('fade'),         INLINE_FLIP_DELAY + INLINE_FLIP_HALF * 2 + INLINE_HOLD);
+    const t5 = setTimeout(onDone,                         INLINE_FLIP_DELAY + INLINE_FLIP_HALF * 2 + INLINE_HOLD + INLINE_FADE);
+    return () => { [t1, t2, t3, t4, t5].forEach(clearTimeout); };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isFaceUp = phase === 'flipping-in' || phase === 'front';
+  const isFaceUp = phase === 'flipping-in' || phase === 'front' || phase === 'fade';
+  const showColor = phase === 'front' || phase === 'fade';
 
-  // Card wrap classes drive the CSS animations
-  const wrapClass = [
-    'gs-blind-overlay__card-wrap',
-    phase === 'flipping-out' ? 'gs-blind-overlay__card-wrap--flipping-out' : '',
-    phase === 'flipping-in'  ? 'gs-blind-overlay__card-wrap--flipping-in'  : '',
-    phase === 'front' && reveal.success  ? 'gs-blind-overlay__card-wrap--success' : '',
-    phase === 'front' && !reveal.success ? 'gs-blind-overlay__card-wrap--fail'    : '',
+  const cls = [
+    'gs-blind-inline',
+    showColor && reveal.success  ? 'gs-blind-inline--success' : '',
+    showColor && !reveal.success ? 'gs-blind-inline--fail'    : '',
+    phase === 'fade'             ? 'gs-blind-inline--fading'  : '',
   ].filter(Boolean).join(' ');
 
-  // Issue 5 — pile-anchored: rendered inside .gs-board as an absolute overlay,
-  // not fixed full-screen. The card animates on top of the pile area.
+  const flipCls = [
+    'gs-blind-inline__flip',
+    phase === 'flipping-out' ? 'gs-blind-inline__flip--out' : '',
+    phase === 'flipping-in'  ? 'gs-blind-inline__flip--in'  : '',
+  ].filter(Boolean).join(' ');
+
   return (
-    <div className="gs-blind-pile-overlay" role="status" aria-live="assertive" aria-label="Blind card reveal">
-      <div className={wrapClass}>
+    <div className={cls} role="status" aria-live="polite" aria-label="Blind card reveal">
+      <div className={flipCls}>
         <Card
           rank={isFaceUp ? reveal.card.rank : undefined}
           suit={isFaceUp ? reveal.card.suit : undefined}
           faceDown={!isFaceUp}
-          size="lg"
-          aria-label={isFaceUp ? `${reveal.card.rank} of ${reveal.card.suit}` : 'Blind card flipping'}
+          size="sm"
         />
       </div>
-
-      {phase === 'front' && (
-        <div
-          className={`gs-blind-overlay__result ${reveal.success ? 'gs-blind-overlay__result--success' : 'gs-blind-overlay__result--fail'}`}
-          aria-label={reveal.success ? 'Success' : 'Failed'}
-        >
-          {reveal.success ? 'YES!' : 'NOPE!'}
-        </div>
-      )}
     </div>
   );
 }
@@ -452,6 +444,8 @@ export function GameScreen(): React.ReactElement {
     // Exposed blind cards: single selection only (identity unknown until played)
     if (exposedBlindCardIds.has(cardId)) {
       setSelectedCards((prev) => prev.includes(cardId) ? [] : [cardId]);
+      const slotIdx = blindCards.findIndex((c) => c.id === cardId);
+      if (slotIdx >= 0) useGameStore.setState({ pendingBlindSlotIndex: slotIdx });
       return;
     }
 
@@ -716,65 +710,78 @@ export function GameScreen(): React.ReactElement {
         {pickupAnimation && <PickupAnimation direction={pickupDirection} />}
         {/* Issue 8 — bomb flash animation */}
         {bombAnimation && <BombAnimation />}
-        {/* Issue 5 — blind reveal anchored to the pile area */}
-        {blindReveal !== null && (
-          <BlindRevealOverlay
-            reveal={blindReveal}
-            onDone={() => useGameStore.setState({ blindReveal: null })}
-          />
-        )}
       </div>
 
       {/* ── Player's Table Cards ─────────────────── */}
-      {blindCards.length > 0 && (
-        <div className="gs-table-zone">
-          <div className="gs-zone-label">Table</div>
-          <div className="gs-table-stacks">
-            {blindCards.map((blindCard: GameCard, i: number) => {
-              const visibleCard = tableCards[i] ?? null;
+      {(blindCards.length > 0 || blindReveal !== null) && (() => {
+        // Inject a ghost slot at blindReveal.slotIndex so the reveal appears in-place
+        const revealIdx = blindReveal?.slotIndex ?? -1;
+        const displayCount = revealIdx >= 0
+          ? Math.max(blindCards.length + 1, revealIdx + 1)
+          : blindCards.length;
 
-              // Visible card: always playable when hand is empty (fail-pickup handles unbeatable plays)
-              const visibleSelected = !isHandZone && !!visibleCard && selectedCards.includes(visibleCard.id);
-              const visibleDisabled = isHandZone || !isYourTurn || !visibleCard;
+        return (
+          <div className="gs-table-zone">
+            <div className="gs-zone-label">Table</div>
+            <div className="gs-table-stacks">
+              {Array.from({ length: displayCount }).map((_, di) => {
+                const isRevealSlot = di === revealIdx;
+                // Map display index → blindCards index: only subtract 1 after the ghost slot
+                const bi = (revealIdx >= 0 && di > revealIdx) ? di - 1 : di;
+                const blindCard: GameCard | null = isRevealSlot ? null : (blindCards[bi] ?? null);
+                const visibleCard = tableCards[di] ?? null;
 
-              // Blind card: selectable when hand is empty and no visible card covers this slot
-              const isThisBlindExposed = exposedBlindCardIds.has(blindCard.id);
-              const blindSelected = isThisBlindExposed && selectedCards.includes(blindCard.id);
-              const blindPlayDisabled = !isThisBlindExposed || !isYourTurn;
+                if (!blindCard && !isRevealSlot) return null;
 
-              return (
-                <div key={i} className="gs-table-slot" aria-label={`Table slot ${i + 1}`}>
-                  {/* Blind card — base of stack; clickable once all visible cards are gone */}
-                  <Card
-                    faceDown
-                    size="sm"
-                    selected={blindSelected}
-                    disabled={blindPlayDisabled}
-                    onClick={(!blindPlayDisabled && !visibleCard) ? () => handleSelectCard(blindCard.id) : undefined}
-                    className="gs-table-slot__blind animate-slide-up"
-                    style={{ animationDelay: `${i * 30}ms` }}
-                    aria-label={isBlindZone && !visibleCard ? 'Blind card — click to play' : 'Blind card'}
-                  />
-                  {/* Visible card — rests on top of blind */}
-                  {visibleCard && (
+                if (isRevealSlot) {
+                  return (
+                    <div key={`reveal-${di}`} className="gs-table-slot" aria-label={`Table slot ${di + 1} revealing`}>
+                      <InlineBlindReveal
+                        reveal={blindReveal!}
+                        onDone={() => useGameStore.setState({ blindReveal: null })}
+                      />
+                    </div>
+                  );
+                }
+
+                const visibleSelected = !isHandZone && !!visibleCard && selectedCards.includes(visibleCard.id);
+                const visibleDisabled = isHandZone || !isYourTurn || !visibleCard;
+                const isThisBlindExposed = exposedBlindCardIds.has(blindCard!.id);
+                const blindSelected = isThisBlindExposed && selectedCards.includes(blindCard!.id);
+                const blindPlayDisabled = !isThisBlindExposed || !isYourTurn;
+
+                return (
+                  <div key={di} className="gs-table-slot" aria-label={`Table slot ${di + 1}`}>
                     <Card
-                      rank={visibleCard.rank}
-                      suit={visibleCard.suit}
+                      faceDown
                       size="sm"
-                      selected={!!visibleSelected}
-                      disabled={visibleDisabled}
-                      onClick={!visibleDisabled ? () => handleSelectCard(visibleCard.id) : undefined}
-                      className="gs-table-slot__visible animate-slide-up"
-                      style={{ animationDelay: `${i * 30 + 15}ms` }}
-                      aria-label={`${visibleCard.rank} of ${visibleCard.suit}, table card`}
+                      selected={blindSelected}
+                      disabled={blindPlayDisabled}
+                      onClick={(!blindPlayDisabled && !visibleCard) ? () => handleSelectCard(blindCard!.id) : undefined}
+                      className="gs-table-slot__blind animate-slide-up"
+                      style={{ animationDelay: `${di * 30}ms` }}
+                      aria-label={isBlindZone && !visibleCard ? 'Blind card — click to play' : 'Blind card'}
                     />
-                  )}
-                </div>
-              );
-            })}
+                    {visibleCard && (
+                      <Card
+                        rank={visibleCard.rank}
+                        suit={visibleCard.suit}
+                        size="sm"
+                        selected={!!visibleSelected}
+                        disabled={visibleDisabled}
+                        onClick={!visibleDisabled ? () => handleSelectCard(visibleCard.id) : undefined}
+                        className="gs-table-slot__visible animate-slide-up"
+                        style={{ animationDelay: `${di * 30 + 15}ms` }}
+                        aria-label={`${visibleCard.rank} of ${visibleCard.suit}, table card`}
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Your Hand ────────────────────────────── */}
       <div className="gs-hand-zone">
@@ -883,6 +890,19 @@ export function GameScreen(): React.ReactElement {
           {selectedCards.length > 0 ? `Play ${selectedCards.length}` : 'Play'}
         </button>
       </div>
+
+      {/* ── Debug Controls (dev only) ─────────────── */}
+      {import.meta.env.DEV && gameId && (
+        <div className="gs-controls" style={{ marginTop: 4, opacity: 0.6 }}>
+          <button
+            className="gs-btn gs-btn--secondary"
+            style={{ fontSize: '0.7rem' }}
+            onClick={() => debugAutoPlay(gameId)}
+          >
+            auto-play to empty deck
+          </button>
+        </div>
+      )}
 
     </div>
   );

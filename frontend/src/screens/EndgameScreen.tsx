@@ -4,6 +4,7 @@
 
 import React from 'react';
 import { useGameStore } from '../store';
+import { requestRematch } from '../socketClient';
 import Button from '../components/Button';
 import './EndgameScreen.css';
 import type { GamePlayer } from '../store';
@@ -14,6 +15,7 @@ export function EndgameScreen(): React.ReactElement {
   const gameStatus   = useGameStore((s) => s.gameStatus);
   const lobbyPlayers = useGameStore((s) => s.lobbyPlayers);
   const currentPlayerId = useGameStore((s) => s.currentPlayerId);
+  const lobbyCode = useGameStore((s) => s.lobbyCode);
 
   const standings = [...lobbyPlayers].sort((a: GamePlayer, b: GamePlayer) => {
     const aCards = a.cardsRemaining ?? Number.MAX_SAFE_INTEGER;
@@ -24,8 +26,14 @@ export function EndgameScreen(): React.ReactElement {
   const loser = standings[standings.length - 1];
   const isYouLoser = loser?.id === currentPlayerId;
 
-  const handleRematch = (): void => {
+  const handleRematch = async (): Promise<void> => {
+    if (!lobbyCode) return;
     useGameStore.setState({ gameStatus: 'rematch' });
+    const result = await requestRematch(lobbyCode) as any;
+    if (!result?.success) {
+      // Revert spinner if server rejected (e.g. another player already triggered it)
+      useGameStore.setState({ gameStatus: 'ended' });
+    }
   };
 
   const handleExit = (): void => {

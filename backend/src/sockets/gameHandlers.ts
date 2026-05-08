@@ -27,6 +27,7 @@ import {
   endGame,
   applySwap,
 } from '../services/GameManager.js';
+import { advancePlayerIndex } from '../services/TurnResolutionService.js';
 import {
   createSession,
   handleReconnect,
@@ -84,6 +85,16 @@ export function setupSocketHandlers(io: Server, ns: PoopyheadNamespace) {
     // GAME: Manual pickup pile
     socket.on('pickupPile', (data, callback) => {
       handlePickupPile(socket, data, callback, io, ns);
+    });
+
+    // DEBUG: Auto-play until draw pile is empty
+    socket.on('debugAutoPlay', (data, callback) => {
+      handleDebugAutoPlay(socket, data, callback, io, ns);
+    });
+
+    // GAME: Rematch — start new game with same lobby players
+    socket.on('rematch', (data, callback) => {
+      handleRematch(socket, data, callback, io, ns);
     });
     
     // RECONNECT: Recover session after disconnect
@@ -480,6 +491,145 @@ function handlePickupPile(
     });
 
     console.log(`[Game] ${data.playerId} picked up pile in ${data.gameId}`);
+  } catch (error) {
+    callback({ success: false, reason: 'ERROR', error: (error as Error).message });
+  }
+}
+
+/**
+ * Auto-play one turn with a simple greedy strategy (lowest valid rank group first).
+ */
+function debugAutoPlayOneTurn(game: GameInstance): GameInstance {
+  const currentPlayerId = game.playOrder[game.currentPlayerIndex];
+  const player = game.players.find(p => p.id === currentPlayerId);
+  if (!player) return game;
+
+  // Player already out — advance past them
+  if (player.hand.length === 0 && player.tableVisible.length === 0 && player.tableBlind.length === 0) {
+    const nextIndex = advancePlayerIndex(game.currentPlayerIndex, 1, game.playOrder.length, game.direction);
+    return { ...game, currentPlayerIndex: nextIndex };
+  }
+
+  const isBlindZone = player.hand.length === 0 && player.tableVisible.length === 0;
+
+  // Blind zone: just flip the first card
+  if (isBlindZone) {
+    const result = processPlayCardAction({ game, playerId: currentPlayerId, cardIds: [player.tableBlind[0].id] });
+    if (result.success && result.updatedGame) return result.updatedGame;
+  }
+
+  const candidates = player.hand.length > 0 ? player.hand : player.tableVisible;
+  const rankOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+  const rankGroups: Record<string, string[]> = {};
+  for (const card of candidates) {
+    rankGroups[card.rank] = rankGroups[card.rank] || [];
+    rankGroups[card.rank].push(card.id);
+  }
+
+  for (const rank of rankOrder) {
+    if (!rankGroups[rank]) continue;
+    const result = processPlayCardAction({ game, playerId: currentPlayerId, cardIds: rankGroups[rank] });
+    if (result.success && result.updatedGame) return result.updatedGame;
+  }
+
+  // Nothing playable — pick up pile
+  if (game.playPile.length > 0) {
+    const result = processPickupAction({ game, playerId: currentPlayerId });
+    if (result.success && result.updatedGame) return result.updatedGame;
+  }
+
+  // Pile empty and nothing valid (shouldn't happen) — skip turn
+  const nextIndex = advancePlayerIndex(game.currentPlayerIndex, 1, game.playOrder.length, game.direction);
+  return { ...game, currentPlayerIndex: nextIndex };
+}
+
+/**
+ * Handle: Debug auto-play until draw pile is empty
+ */
+function handleDebugAutoPlay(
+  socket: Socket,
+  data: { gameId: string },
+  callback: Function,
+  io: Server,
+  ns: PoopyheadNamespace
+) {
+  try {
+    const game = ns.games.get(data.gameId);
+    if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
+    if (game.status !== 'playing') return callback({ success: false, reason: 'GAME_NOT_PLAYING' });
+
+    let currentGame = game;
+    let iterations = 0;
+    while (currentGame.deck.length > 0 && iterations < 2000) {
+      const endCheck = checkGameEnd(currentGame);
+      if (endCheck.ended) break;
+      currentGame = debugAutoPlayOneTurn(currentGame);
+      iterations++;
+    }
+
+    ns.games.set(data.gameId, currentGame);
+
+    const currentTurnPlayer = currentGame.players[currentGame.currentPlayerIndex];
+    callback({ success: true, iterations });
+    io.to(`lobby:${game.lobbyCode}`).emit('debugStateSync', {
+      game: currentGame,
+      currentTurnPlayerId: currentGame.playOrder[currentGame.currentPlayerIndex],
+      currentTurnPlayerUsername: currentTurnPlayer?.username,
+      deckCount: currentGame.deck.length,
+      players: buildPublicPlayerState(currentGame),
+    });
+
+    console.log(`[Debug] Auto-played ${iterations} turns in ${data.gameId}, deck now ${currentGame.deck.length}`);
+  } catch (error) {
+    callback({ success: false, reason: 'ERROR', error: (error as Error).message });
+  }
+}
+
+/**
+ * Handle: Rematch — create a new game with the same lobby players
+ */
+function handleRematch(
+  socket: Socket,
+  data: { code: string },
+  callback: Function,
+  io: Server,
+  ns: PoopyheadNamespace
+) {
+  try {
+    const lobby = ns.lobbies.get(data.code);
+    if (!lobby) return callback({ success: false, reason: 'LOBBY_NOT_FOUND' });
+
+    // Guard: don't create a second game if one is already active
+    const existingGame = lobby.currentGameId ? ns.games.get(lobby.currentGameId) : null;
+    if (existingGame && existingGame.status !== 'ended') {
+      return callback({ success: false, reason: 'GAME_STILL_ACTIVE' });
+    }
+
+    const game = createGame({
+      lobbyCode: data.code,
+      players: lobby.players.map((p) => ({ id: p.id, username: p.username, poopyheadCount: 0 })),
+      settings: lobby.settings,
+      direction: 'clockwise',
+    });
+
+    ns.games.set(game.id, game);
+    const updatedLobby = updateLobbyStatus(lobby, 'playing', game.id);
+    ns.lobbies.set(data.code, updatedLobby);
+
+    for (const player of lobby.players) {
+      const playerSocket = ns.playerToSocket.get(player.id);
+      if (playerSocket) createSession(player.id, game.id, data.code, playerSocket);
+    }
+
+    const currentTurnPlayer = game.players[game.currentPlayerIndex];
+    callback({ success: true });
+    io.to(`lobby:${data.code}`).emit('gameStarted', {
+      game,
+      currentTurnPlayerId: currentTurnPlayer?.id,
+      currentTurnPlayerUsername: currentTurnPlayer?.username,
+    });
+
+    console.log(`[Rematch] New game ${game.id} in lobby ${data.code}`);
   } catch (error) {
     callback({ success: false, reason: 'ERROR', error: (error as Error).message });
   }
