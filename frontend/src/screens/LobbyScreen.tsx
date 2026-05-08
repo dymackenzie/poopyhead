@@ -241,8 +241,8 @@ export function LobbyScreen(): React.ReactElement {
                   <button
                     type="button"
                     className="lobby-bot-btn"
-                    onClick={() => setBotCount(c => Math.min(9, c + 1))}
-                    disabled={botCount === 9}
+                    onClick={() => setBotCount(c => Math.min(4, c + 1))}
+                    disabled={botCount === 4}
                   >+</button>
                 </div>
               </div>
