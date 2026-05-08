@@ -54,6 +54,7 @@ export interface GamePlayer {
   tableVisible: Card[];
   tableBlind: Card[];
   poopyheadCount: number;
+  isBot?: boolean;
 }
 
 export interface GameTurn {
@@ -70,7 +71,7 @@ export interface GameTurn {
  */
 export interface CreateGameInput {
   lobbyCode: string;
-  players: Array<{ id: string; username: string; poopyheadCount: number }>;
+  players: Array<{ id: string; username: string; poopyheadCount: number; isBot?: boolean }>;
   settings: { bombEnabled: boolean; turnTimerSeconds: number };
   direction: 'clockwise' | 'counterclockwise';
 }
@@ -89,6 +90,7 @@ export function createGame(input: CreateGameInput): GameInstance {
     players: input.players.map((p, i) => ({
       id: p.id,
       username: p.username,
+      isBot: p.isBot,
       // During swapping phase hand = all dealt hand cards (tableVisible not yet assigned).
       // dealGame returns playerHands already stripped of the auto-split visible cards, so
       // we combine them back so the player can choose their own 3.

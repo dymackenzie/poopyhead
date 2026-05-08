@@ -171,7 +171,7 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  gap: var(--space-5);
+  gap: var(--space-3) var(--space-4);
   padding: var(--space-3) var(--space-4) var(--space-2);
   flex-shrink: 0;
   flex-wrap: wrap;
@@ -234,6 +234,26 @@
   color: var(--accent-yellow);
 }
 
+/* ── Compact opponents row (5-player: 4 opponents, single row) ── */
+
+.gs-opponents-row--compact {
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: var(--space-2) var(--space-2) var(--space-1);
+}
+
+.gs-opponents-row--compact .gs-opponent-cards {
+  height: 40px;
+}
+
+.gs-opponents-row--compact .gs-opp-table {
+  gap: 2px;
+}
+
+.gs-opponents-row--compact .gs-opponent-name {
+  max-width: 40px;
+}
+
 /* ── Opponent Table Cards ────────────────────── */
 
 .gs-opp-table {
@@ -253,6 +273,16 @@
   height: 62px; /* 54px card + 8px peek */
 }
 
+/* xxs slot: 26px wide card, 5px peek */
+.gs-opp-table-slot--xxs {
+  width: 26px;
+  height: 42px; /* 37px card + 5px peek */
+}
+
+.gs-opp-table-slot--xxs .gs-opp-table-visible {
+  bottom: 5px !important;
+}
+
 .gs-opp-table-slot > .ph-card {
   position: absolute;
   bottom: 0;
@@ -264,25 +294,6 @@
   bottom: 8px !important;
   left: 0;
   box-shadow: 0 -1px 4px rgba(0, 0, 0, 0.15), var(--card-shadow);
-}
-
-/* ── Side opponents (5-6 player) ─────────────── */
-
-.gs-side-opponents {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 var(--space-3);
-  flex-shrink: 0;
-}
-
-.gs-side-opponent {
-  display: flex;
-  gap: var(--space-1);
-  padding: 3px var(--space-2);
-  background: var(--bg-surface);
-  border: 1.5px solid var(--border-strong);
-  border-radius: var(--radius-pill);
-  align-items: center;
 }
 
 /* ── Center Board ────────────────────────────── */

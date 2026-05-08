@@ -8,7 +8,7 @@
 import React from 'react';
 import './Card.css';
 
-export type CardSize = 'xs' | 'sm' | 'md' | 'lg';
+export type CardSize = 'xxs' | 'xs' | 'sm' | 'md' | 'lg';
 
 interface CardProps {
   rank?: string;

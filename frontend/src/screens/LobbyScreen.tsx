@@ -19,6 +19,7 @@ export function LobbyScreen(): React.ReactElement {
   const [username, setUsername] = useState('');
   const [lobbyCode, setLobbyCode] = useState('');
   const [bombEnabled, setBombEnabled] = useState(false);
+  const [botCount, setBotCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -38,7 +39,7 @@ export function LobbyScreen(): React.ReactElement {
     setLoading(true);
     setError('');
     try {
-      const result = await createLobby(username.trim(), { bombEnabled, turnTimerSeconds: 60 });
+      const result = await createLobby(username.trim(), { bombEnabled, turnTimerSeconds: 60, botCount });
       if (result.success) {
         useGameStore.setState({
           lobbyCode: result.lobby?.code,
@@ -123,9 +124,9 @@ export function LobbyScreen(): React.ReactElement {
               {lobbyPlayers.map((player: GamePlayer, index: number) => (
                 <PlayerCard
                   key={player.id}
-                  name={player.username + (player.id === currentPlayerId ? ' (you)' : '')}
-                  meta={player.ready ? 'Ready' : 'Waiting...'}
-                  status={player.ready ? 'ready' : 'waiting'}
+                  name={player.username + (player.id === currentPlayerId ? ' (you)' : player.isBot ? ' (bot)' : '')}
+                  meta={player.isBot ? 'AI Player' : player.ready ? 'Ready' : 'Waiting...'}
+                  status={player.isBot ? 'ready' : player.ready ? 'ready' : 'waiting'}
                   highlight={player.id === currentPlayerId}
                   className="animate-slide-in"
                   style={{ animationDelay: `${index * 40}ms` }}
@@ -227,6 +228,24 @@ export function LobbyScreen(): React.ReactElement {
                 <span className="lobby-checkbox-track" />
                 <span className="lobby-checkbox-label">Enable 10-Bomb rule</span>
               </label>
+              <div className="lobby-bot-row">
+                <span className="lobby-bot-label">AI Players</span>
+                <div className="lobby-bot-stepper">
+                  <button
+                    type="button"
+                    className="lobby-bot-btn"
+                    onClick={() => setBotCount(c => Math.max(0, c - 1))}
+                    disabled={botCount === 0}
+                  >−</button>
+                  <span className="lobby-bot-count">{botCount}</span>
+                  <button
+                    type="button"
+                    className="lobby-bot-btn"
+                    onClick={() => setBotCount(c => Math.min(9, c + 1))}
+                    disabled={botCount === 9}
+                  >+</button>
+                </div>
+              </div>
             </div>
             {error && <p className="lobby-error">{error}</p>}
             <Button variant="primary" onClick={handleCreateLobby} disabled={loading}>

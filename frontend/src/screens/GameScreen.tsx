@@ -399,13 +399,7 @@ export function GameScreen(): React.ReactElement {
   /* Issue 3 — determine pickup animation direction based on who picked up */
   const pickupDirection: FlyDirection = (() => {
     if (!pickupPlayerId || pickupPlayerId === currentPlayerId) return 'down';
-    const topOpp  = opponents.slice(0, 3);
-    const sideOpp = opponents.slice(3);
-    const topIdx  = topOpp.findIndex((p) => p.id === pickupPlayerId);
-    if (topIdx >= 0) return 'up';
-    const sideIdx = sideOpp.findIndex((p) => p.id === pickupPlayerId);
-    if (sideIdx >= 0) return sideIdx % 2 === 0 ? 'left' : 'right';
-    return 'up'; // fallback for unknown opponent
+    return 'up';
   })();
 
   // Determine which zone is active for card selection
@@ -589,9 +583,10 @@ export function GameScreen(): React.ReactElement {
     );
   }
 
-  /* Split opponents for layout: top-row vs side opponents */
-  const topOpponents  = opponents.slice(0, 3);
-  const sideOpponents = opponents.slice(3);
+  const topOpponents = opponents;
+  const isCompactOpponents = topOpponents.length >= 4;
+  const oppCardSize = isCompactOpponents ? 'xxs' as const : 'xs' as const;
+  const handFanOffset = isCompactOpponents ? 6 : 10;
 
   return (
     <div className="game-screen">
@@ -619,7 +614,7 @@ export function GameScreen(): React.ReactElement {
 
       {/* ── Opponents Top ────────────────────────── */}
       {topOpponents.length > 0 && (
-        <div className="gs-opponents-row" role="list" aria-label="Opponents">
+        <div className={`gs-opponents-row${isCompactOpponents ? ' gs-opponents-row--compact' : ''}`} role="list" aria-label="Opponents">
           {topOpponents.map((player: LobbyPlayer) => {
             const isActive = currentTurnPlayerId === player.id;
             const handCount = player.cardsInHand ?? player.cardsRemaining;
@@ -637,9 +632,9 @@ export function GameScreen(): React.ReactElement {
                     <Card
                       key={i}
                       faceDown
-                      size="xs"
+                      size={oppCardSize}
                       className="gs-opponent-card"
-                      style={{ transform: `translateX(${i * -10}px) rotate(${(i - 1) * 3}deg)` }}
+                      style={{ transform: `translateX(${i * -handFanOffset}px) rotate(${(i - 1) * 3}deg)` }}
                     />
                   ))}
                 </div>
@@ -648,13 +643,13 @@ export function GameScreen(): React.ReactElement {
                 {blindCount > 0 && (
                   <div className="gs-opp-table" aria-hidden="true">
                     {Array.from({ length: blindCount }).map((_, i) => (
-                      <div key={i} className="gs-opp-table-slot">
-                        <Card faceDown size="xs" />
+                      <div key={i} className={`gs-opp-table-slot${isCompactOpponents ? ' gs-opp-table-slot--xxs' : ''}`}>
+                        <Card faceDown size={oppCardSize} />
                         {visibleCards[i] && (
                           <Card
                             rank={visibleCards[i].rank}
                             suit={visibleCards[i].suit}
-                            size="xs"
+                            size={oppCardSize}
                             className="gs-opp-table-visible"
                           />
                         )}
@@ -668,21 +663,6 @@ export function GameScreen(): React.ReactElement {
                   <span className="gs-opponent-name">{player.username}</span>
                   <span className="gs-opponent-count">{handCount ?? '?'}</span>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── Side opponents (5-6 player games) ───── */}
-      {sideOpponents.length > 0 && (
-        <div className="gs-side-opponents" aria-label="Additional opponents">
-          {sideOpponents.map((player: LobbyPlayer) => {
-            const isActive = currentTurnPlayerId === player.id;
-            return (
-              <div key={player.id} className={`gs-side-opponent ${isActive ? 'gs-opponent--active' : ''}`}>
-                <span className="gs-opponent-name">{player.username}</span>
-                <span className="gs-opponent-count">{player.cardsInHand ?? player.cardsRemaining ?? '?'}</span>
               </div>
             );
           })}

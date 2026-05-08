@@ -7,6 +7,7 @@ export interface GameCard {
 export interface LobbyPlayer {
   id: string;
   username: string;
+  isBot?: boolean;
   cardsRemaining?: number;
   ready?: boolean;
   isCurrentPlayer?: boolean;
@@ -24,6 +25,7 @@ export interface LobbySnapshot {
 export interface LobbySettings {
   bombEnabled: boolean;
   turnTimerSeconds: number;
+  botCount?: number;
 }
 
 export interface LobbyResponse {

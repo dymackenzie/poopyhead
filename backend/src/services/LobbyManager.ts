@@ -6,6 +6,7 @@
  */
 
 import { v4 as uuid } from 'uuid';
+import { pickAIName } from './AIPlayerService.js';
 
 export interface Lobby {
   id: string;
@@ -27,6 +28,7 @@ export interface LobbyPlayer {
   userId?: string;
   username: string;
   isGuest: boolean;
+  isBot?: boolean;
   joinedAt: Date;
   ready: boolean;
   socketId: string;
@@ -75,7 +77,7 @@ export function createLobby(
     ],
     status: 'waiting',
     settings,
-    maxPlayers: 10,
+    maxPlayers: 5,
   };
 }
 
@@ -204,6 +206,30 @@ export function updateLobbyStatus(
     status,
     currentGameId: gameId || lobby.currentGameId,
   };
+}
+
+/**
+ * Adds bot players to a lobby. Bots are pre-readied with generated names.
+ */
+export function addBotsToLobby(lobby: Lobby, count: number): Lobby {
+  const usedNames = lobby.players.map(p => p.username);
+  const newBots: LobbyPlayer[] = [];
+
+  for (let i = 0; i < count; i++) {
+    if (lobby.players.length + newBots.length >= lobby.maxPlayers) break;
+    const name = pickAIName([...usedNames, ...newBots.map(b => b.username)]);
+    newBots.push({
+      id: uuid(),
+      username: name,
+      isGuest: true,
+      isBot: true,
+      joinedAt: new Date(),
+      ready: true,
+      socketId: `bot_${uuid()}`,
+    });
+  }
+
+  return { ...lobby, players: [...lobby.players, ...newBots] };
 }
 
 /**

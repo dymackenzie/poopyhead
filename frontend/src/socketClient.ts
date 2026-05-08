@@ -116,7 +116,12 @@ export function createLobby(
   settings: LobbySettings
 ): Promise<LobbyResponse> {
   return new Promise((resolve) => {
-    emitEvent('createLobby', { username, bombEnabled: settings.bombEnabled, turnTimerSeconds: settings.turnTimerSeconds }, resolve);
+    emitEvent('createLobby', {
+      username,
+      bombEnabled: settings.bombEnabled,
+      turnTimerSeconds: settings.turnTimerSeconds,
+      botCount: settings.botCount ?? 0,
+    }, resolve);
   });
 }
 

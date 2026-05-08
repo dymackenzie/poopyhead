@@ -524,3 +524,59 @@
   padding: var(--space-3);
   font-style: italic;
 }
+
+/* === Bot player stepper === */
+
+.lobby-bot-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) 0;
+}
+
+.lobby-bot-label {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.lobby-bot-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.lobby-bot-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.lobby-bot-btn:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.lobby-bot-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.lobby-bot-count {
+  font-size: var(--font-base);
+  font-weight: 700;
+  min-width: 20px;
+  text-align: center;
+}

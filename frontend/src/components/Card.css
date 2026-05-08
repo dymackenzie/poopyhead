@@ -23,6 +23,11 @@
 
 /* === Sizes === */
 
+.ph-card--xxs {
+  width: 26px;
+  height: 37px;
+}
+
 .ph-card--xs {
   width: 38px;
   height: 54px;
@@ -167,6 +172,13 @@
 }
 
 /* Size-specific typography */
+
+.ph-card--xxs .card-back-icon   { font-size: 8px; }
+.ph-card--xxs .card-index-rank  { font-size: 7px; }
+.ph-card--xxs .card-index-suit  { font-size: 5px; }
+.ph-card--xxs .card-center-suit { font-size: 10px; }
+.ph-card--xxs .card-index--tl   { top: 2px; left: 2px; }
+.ph-card--xxs .card-index--br   { bottom: 2px; right: 2px; }
 
 .ph-card--xs .card-index-rank  { font-size: 9px; }
 .ph-card--xs .card-index-suit  { font-size: 7px; }
