@@ -312,8 +312,8 @@ describe('Step 7: Realtime Multiplayer Core', () => {
   });
   
   describe('Step 7 Validation Checklist', () => {
-    it('should support 2-10 players in lobbies', () => {
-      for (let count = 2; count <= 10; count++) {
+    it('should support 2-5 players in lobbies', () => {
+      for (let count = 2; count <= 5; count++) {
         let lobby = createLobby('user1', 'Alice', false, 'socket1', {
           bombEnabled: true,
           turnTimerSeconds: 60,

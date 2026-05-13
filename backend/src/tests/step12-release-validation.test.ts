@@ -52,13 +52,13 @@ describe('Step 12: Release Validation Gate', () => {
       expect(result.updatedLobby?.players.length).toBe(2);
     });
 
-    it('should enforce player count limits (max 10)', () => {
+    it('should enforce player count limits (max 5)', () => {
       const lobby = createLobby('creator', 'P1', true, 's1', {
         bombEnabled: true,
         turnTimerSeconds: 30,
       });
 
-      expect(lobby.maxPlayers).toBe(10);
+      expect(lobby.maxPlayers).toBe(5);
     });
 
     it('should create games with correct setup', () => {

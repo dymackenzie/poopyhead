@@ -77,7 +77,7 @@ export function createLobby(
     ],
     status: 'waiting',
     settings,
-    maxPlayers: 10,
+    maxPlayers: 5,
   };
 }
 
