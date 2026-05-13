@@ -12,6 +12,28 @@ import { dealGame } from './DealService';
 import { validateMove } from './MoveValidatorService';
 import { resolveTurn, advancePlayerIndex } from './TurnResolutionService';
 
+function isPlayerActive(player: GamePlayer): boolean {
+  return player.hand.length > 0 || player.tableVisible.length > 0 || player.tableBlind.length > 0;
+}
+
+function skipDonePlayers(
+  startIndex: number,
+  players: GamePlayer[],
+  playOrder: string[],
+  direction: 'clockwise' | 'counterclockwise'
+): number {
+  const activeCount = players.filter(isPlayerActive).length;
+  if (activeCount <= 1) return startIndex;
+  let index = startIndex;
+  for (let i = 0; i < playOrder.length; i++) {
+    const pid = playOrder[index];
+    const player = players.find(p => p.id === pid);
+    if (player && isPlayerActive(player)) return index;
+    index = advancePlayerIndex(index, 1, playOrder.length, direction);
+  }
+  return startIndex;
+}
+
 export interface GameInstance {
   id: string;
   lobbyCode: string;
@@ -226,14 +248,16 @@ export function processPlayCardAction(input: PlayCardActionInput): PlayCardActio
 
     if (blindFails) {
       const failedPlayer = { ...updatedPlayer, hand: [...updatedPlayer.hand, ...newPile] };
-      const nextIndex = advancePlayerIndex(
+      const rawNextIndex = advancePlayerIndex(
         game.currentPlayerIndex, 1, game.playOrder.length, game.direction
       );
+      const failedPlayers = game.players.map(p => (p.id === playerId ? failedPlayer : p));
+      const nextIndex = skipDonePlayers(rawNextIndex, failedPlayers, game.playOrder, game.direction);
       return {
         success: true,
         updatedGame: {
           ...game,
-          players: game.players.map(p => (p.id === playerId ? failedPlayer : p)),
+          players: failedPlayers,
           playPile: [],
           currentPlayerIndex: nextIndex,
           activeConstraints: { sevenOrUnder: false, skipCount: 0 },
@@ -269,13 +293,26 @@ export function processPlayCardAction(input: PlayCardActionInput): PlayCardActio
     bombEnabled: game.bombEnabled,
   });
   
+  // Build updated players list first so we can skip done players
+  const updatedPlayers = game.players.map(p => (p.id === playerId ? updatedPlayer : p));
+  const finalNextIndex = skipDonePlayers(
+    turnResolution.nextPlayerIndex, updatedPlayers, game.playOrder, game.direction
+  );
+
+  // Track elimination order when a player clears all their cards
+  const justFinished = !isPlayerActive(updatedPlayer) && isPlayerActive(player);
+  const newEliminationOrder = justFinished
+    ? [...game.eliminationOrder, playerId]
+    : game.eliminationOrder;
+
   // Update game state
   const updatedGame: GameInstance = {
     ...game,
-    players: game.players.map(p => (p.id === playerId ? updatedPlayer : p)),
+    players: updatedPlayers,
     playPile: turnResolution.bombTriggered ? [] : newPile,
-    currentPlayerIndex: turnResolution.nextPlayerIndex,
+    currentPlayerIndex: finalNextIndex,
     activeConstraints: turnResolution.newConstraints as any,
+    eliminationOrder: newEliminationOrder,
     turnHistory: [
       ...game.turnHistory,
       {
@@ -440,19 +477,21 @@ export function processPickupAction(input: PickupActionInput): PickupActionOutpu
   }
 
   const updatedPlayer = { ...player, hand: [...player.hand, ...game.playPile] };
+  const updatedPlayers = game.players.map(p => (p.id === playerId ? updatedPlayer : p));
 
-  const nextPlayerIndex = advancePlayerIndex(
+  const rawNextIndex = advancePlayerIndex(
     game.currentPlayerIndex,
     1,
     game.playOrder.length,
     game.direction
   );
+  const nextPlayerIndex = skipDonePlayers(rawNextIndex, updatedPlayers, game.playOrder, game.direction);
 
   return {
     success: true,
     updatedGame: {
       ...game,
-      players: game.players.map(p => (p.id === playerId ? updatedPlayer : p)),
+      players: updatedPlayers,
       playPile: [],
       currentPlayerIndex: nextPlayerIndex,
       activeConstraints: { sevenOrUnder: false, skipCount: 0 },

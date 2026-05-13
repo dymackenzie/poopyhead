@@ -136,16 +136,26 @@ export function App(): React.ReactElement {
           lobbyPlayers: updatedLobbyPlayers,
         };
 
-        // Blind card in-place reveal — success = card stayed, pile was not picked up
+        // Blind card in-place reveal — only animate on the player whose card it was
         if (dataAny.isBlindPlay === true && dataAny.revealedCard != null) {
-          const { pendingBlindSlotIndex } = useGameStore.getState();
-          patch.blindReveal = { card: dataAny.revealedCard, success: true, slotIndex: pendingBlindSlotIndex ?? 0 };
-          patch.pendingBlindSlotIndex = null;
+          const { pendingBlindSlotIndex, currentPlayerId } = useGameStore.getState();
+          if (dataAny.playerId === currentPlayerId) {
+            patch.blindReveal = { card: dataAny.revealedCard, success: true, slotIndex: pendingBlindSlotIndex ?? 0 };
+            patch.pendingBlindSlotIndex = null;
+          } else {
+            patch.opponentBlindReveal = { playerId: dataAny.playerId, card: dataAny.revealedCard, success: true };
+          }
         }
 
         // Issue 8 — bomb animation: fire when the pile was just cleared by a bomb
         if (dataAny.bombCleared === true || dataAny.isBomb === true) {
           patch.bombAnimation = true;
+        }
+
+        // Card play animation: show a card flying to the pile when any player plays
+        if (dataAny.cardsPlayed && dataAny.cardsPlayed.length > 0) {
+          const { currentPlayerId: myId } = useGameStore.getState();
+          patch.cardPlayAnimation = { fromBottom: dataAny.playerId === myId };
         }
 
         useGameStore.setState(patch);
@@ -172,11 +182,15 @@ export function App(): React.ReactElement {
           pickupPlayerId: dataAny.playerId ?? dataAny.pickupPlayerId ?? null,
         };
 
-        // Blind card that failed — show in-place reveal with failure state
-        if ((dataAny.isBlindPlay === true || dataAny.blindFail === true) && dataAny.revealedCard != null) {
-          const { pendingBlindSlotIndex } = useGameStore.getState();
-          patch.blindReveal = { card: dataAny.revealedCard, success: false, slotIndex: pendingBlindSlotIndex ?? 0 };
-          patch.pendingBlindSlotIndex = null;
+        // Blind card that failed — only animate for actual blind plays (table card fails need no flip)
+        if (dataAny.isBlindPlay === true && dataAny.revealedCard != null) {
+          const { pendingBlindSlotIndex, currentPlayerId } = useGameStore.getState();
+          if (dataAny.playerId === currentPlayerId) {
+            patch.blindReveal = { card: dataAny.revealedCard, success: false, slotIndex: pendingBlindSlotIndex ?? 0 };
+            patch.pendingBlindSlotIndex = null;
+          } else {
+            patch.opponentBlindReveal = { playerId: dataAny.playerId, card: dataAny.revealedCard, success: false };
+          }
         }
 
         useGameStore.setState(patch);

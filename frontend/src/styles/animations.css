@@ -117,6 +117,20 @@
   100% { opacity: 0; transform: translate(var(--fly-x, 0px), var(--fly-y, 180px)) scale(0.7) rotate(var(--fly-rot, 5deg)); }
 }
 
+/* --- Card play fly-to-pile animation --- */
+
+@keyframes cardPlayFromBottom {
+  0%   { opacity: 0.85; transform: translate(-50%, calc(-50% + 220px)) scale(0.9); }
+  60%  { opacity: 0.95; }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.05); }
+}
+
+@keyframes cardPlayFromTop {
+  0%   { opacity: 0.85; transform: translate(-50%, calc(-50% - 180px)) scale(0.9); }
+  60%  { opacity: 0.95; }
+  100% { opacity: 0;    transform: translate(-50%, -50%) scale(1.05); }
+}
+
 /* --- Bomb burst animation (Issue 8) --- */
 
 @keyframes bomb-burst {

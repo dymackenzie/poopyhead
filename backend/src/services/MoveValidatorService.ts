@@ -98,6 +98,16 @@ export function validateMove(context: ValidationContext): ValidationResult {
     return { valid: true, cardsToPlay, sourceZone };
   }
 
+  // Table visible plays also always proceed — fail-pickup handled by GameManager
+  if (sourceZone === 'table') {
+    // Rule 5: Face-up table cards of same rank cannot stack
+    const sameRankCount = countSameRank(cardsToPlay);
+    if (sameRankCount > 1 && cardsToPlay.length > 1) {
+      return { valid: false, reason: 'TABLE_SAME_RANK_NO_STACK' };
+    }
+    return { valid: true, cardsToPlay, sourceZone };
+  }
+
   // Rule 4: Multiple cards played from hand must all share the same rank
   if (cardsToPlay.length > 1 && sourceZone === 'hand') {
     const firstRank = cardsToPlay[0].rank;
@@ -106,20 +116,10 @@ export function validateMove(context: ValidationContext): ValidationResult {
     }
   }
 
-  // Rule 3 & 7: Check pile legality
+  // Rule 3 & 7: Check pile legality (hand zone only at this point)
   const pileValidation = validatePileLegality(cardsToPlay, context.currentPile, context.activeConstraints, context.bombEnabled);
   if (!pileValidation.valid) {
     return pileValidation;
-  }
-  
-  // Rule 5: Face-up table cards of same rank cannot stack
-  if (sourceZone === 'table') {
-    const sameRankCount = countSameRank(cardsToPlay);
-    if (sameRankCount > 1 && cardsToPlay.length > 1) {
-      return { valid: false, reason: 'TABLE_SAME_RANK_NO_STACK' };
-    }
-    // Table visible plays always proceed regardless of pile rank — same fail-pickup mechanic as blind
-    return { valid: true, cardsToPlay, sourceZone };
   }
 
   return {

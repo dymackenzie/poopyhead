@@ -50,6 +50,8 @@ export interface GameState {
   activeConstraints: { sevenOrUnder: boolean; skipCount: number };
   /** Set when a blind card is played — triggers in-place reveal at the slot */
   blindReveal: BlindReveal | null;
+  /** Set when an opponent plays a blind card — triggers reveal animation on their table */
+  opponentBlindReveal: { playerId: string; card: GameCard; success: boolean } | null;
   /** Tracks which slot index the currently-selected blind card occupies */
   pendingBlindSlotIndex: number | null;
   /** Set true when any player picks up the pile — triggers fly animation */
@@ -58,6 +60,8 @@ export interface GameState {
   pickupPlayerId: string | null;
   /** Set true momentarily when a bomb clears the pile */
   bombAnimation: boolean;
+  /** Set when any player plays cards — triggers a card-to-pile fly animation */
+  cardPlayAnimation: { fromBottom: boolean } | null;
 
   // Endgame
   loserId?: string;
@@ -95,10 +99,12 @@ export const useGameStore = create<GameState>((set) => ({
   deckCount: 0,
   activeConstraints: { sevenOrUnder: false, skipCount: 0 },
   blindReveal: null,
+  opponentBlindReveal: null,
   pendingBlindSlotIndex: null,
   pickupAnimation: false,
   pickupPlayerId: null,
   bombAnimation: false,
+  cardPlayAnimation: null,
   loserTableCards: [],
   loserBlindCards: [],
 

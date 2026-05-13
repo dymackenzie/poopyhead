@@ -266,11 +266,20 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
     return;
   }
 
-  // Player already out — advance
+  // Player already out — advance and broadcast so frontend learns the new currentTurnPlayerId
   if (player.hand.length === 0 && player.tableVisible.length === 0 && player.tableBlind.length === 0) {
     const nextIndex = advancePlayerIndex(game.currentPlayerIndex, 1, game.playOrder.length, game.direction);
     const advanced = { ...game, currentPlayerIndex: nextIndex };
     ns.games.set(game.id, advanced);
+    io.to(`lobby:${game.lobbyCode}`).emit('cardPlayed', {
+      playerId: currentPlayerId,
+      cardsPlayed: [],
+      nextPlayerId: advanced.playOrder[nextIndex],
+      pileState: advanced.playPile,
+      deckCount: advanced.deck.length,
+      activeConstraints: advanced.activeConstraints,
+      players: buildPublicPlayerState(advanced),
+    });
     scheduleNextAITurnIfNeeded(advanced, io, ns);
     return;
   }
@@ -286,12 +295,16 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
     }
   }
 
+  const isTableZone = player.hand.length === 0 && player.tableVisible.length > 0;
   const candidates = player.hand.length > 0 ? player.hand : player.tableVisible;
   const rankOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   const rankGroups: Record<string, string[]> = {};
   for (const card of candidates) {
     rankGroups[card.rank] = rankGroups[card.rank] || [];
-    rankGroups[card.rank].push(card.id);
+    // Table cards can't stack same-rank — only keep one card per rank group in table zone
+    if (!isTableZone || rankGroups[card.rank].length === 0) {
+      rankGroups[card.rank].push(card.id);
+    }
   }
 
   for (const rank of rankOrder) {
@@ -315,10 +328,19 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
     }
   }
 
-  // Pile empty and nothing valid — skip turn
+  // Pile empty and nothing valid — advance turn and broadcast so frontend doesn't freeze
   const nextIndex = advancePlayerIndex(game.currentPlayerIndex, 1, game.playOrder.length, game.direction);
   const advanced = { ...game, currentPlayerIndex: nextIndex };
   ns.games.set(game.id, advanced);
+  io.to(`lobby:${game.lobbyCode}`).emit('cardPlayed', {
+    playerId: currentPlayerId,
+    cardsPlayed: [],
+    nextPlayerId: advanced.playOrder[nextIndex],
+    pileState: advanced.playPile,
+    deckCount: advanced.deck.length,
+    activeConstraints: advanced.activeConstraints,
+    players: buildPublicPlayerState(advanced),
+  });
   scheduleNextAITurnIfNeeded(advanced, io, ns);
 }
 
@@ -673,12 +695,15 @@ function debugAutoPlayOneTurn(game: GameInstance): GameInstance {
     if (result.success && result.updatedGame) return result.updatedGame;
   }
 
+  const isTableZone = player.hand.length === 0 && player.tableVisible.length > 0;
   const candidates = player.hand.length > 0 ? player.hand : player.tableVisible;
   const rankOrder = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
   const rankGroups: Record<string, string[]> = {};
   for (const card of candidates) {
     rankGroups[card.rank] = rankGroups[card.rank] || [];
-    rankGroups[card.rank].push(card.id);
+    if (!isTableZone || rankGroups[card.rank].length === 0) {
+      rankGroups[card.rank].push(card.id);
+    }
   }
 
   for (const rank of rankOrder) {
