@@ -3,16 +3,29 @@
  * Home → Create/Join → Lobby waiting room
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useGameStore } from '../store';
-import { createLobby, joinLobby, setPlayerReady, startGame } from '../socketClient';
+import { createLobby, joinLobby, setPlayerReady, startGame, resumeGame } from '../socketClient';
 import Button from '../components/Button';
 import Input from '../components/Input';
 import PlayerCard from '../components/PlayerCard';
+import AccountScreen from './AccountScreen';
+import LeaderboardScreen from './LeaderboardScreen';
 import './LobbyScreen.css';
 import type { GamePlayer } from '../store';
+import type { ActiveGameSummary } from '../types/game';
 
-type LobbyMode = 'home' | 'create' | 'join';
+type LobbyMode = 'home' | 'create' | 'join' | 'account' | 'leaderboard';
+
+function timeAgo(isoString: string): string {
+  const diff = Date.now() - new Date(isoString).getTime();
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
 
 export function LobbyScreen(): React.ReactElement {
   const [mode, setMode] = useState<LobbyMode>('home');
@@ -20,6 +33,7 @@ export function LobbyScreen(): React.ReactElement {
   const [lobbyCode, setLobbyCode] = useState('');
   const [bombEnabled, setBombEnabled] = useState(false);
   const [botCount, setBotCount] = useState(0);
+  const [gameMode, setGameMode] = useState<'live' | 'async'>('async');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -28,6 +42,20 @@ export function LobbyScreen(): React.ReactElement {
   const currentPlayerId = useGameStore((state) => state.currentPlayerId);
   const connected = useGameStore((state) => state.connected);
   const canStartGame = useGameStore((state) => state.canStartGame);
+  const authUser = useGameStore((state) => state.authUser);
+  const authToken = useGameStore((state) => state.authToken);
+  const activeGames = useGameStore((state) => state.activeGames);
+  const setActiveGames = useGameStore((state) => state.setActiveGames);
+
+  useEffect(() => {
+    if (mode !== 'home' || !authToken) return;
+    fetch('/api/games/active', {
+      headers: { Authorization: `Bearer ${authToken}` },
+    })
+      .then(r => r.json())
+      .then(data => setActiveGames(data.games ?? []))
+      .catch(() => setActiveGames([]));
+  }, [mode, authToken]);
 
   const me = lobbyPlayers.find((p) => p.id === currentPlayerId);
   const isHost = currentPlayerId === lobbyPlayers[0]?.id;
@@ -39,7 +67,7 @@ export function LobbyScreen(): React.ReactElement {
     setLoading(true);
     setError('');
     try {
-      const result = await createLobby(username.trim(), { bombEnabled, turnTimerSeconds: 60, botCount });
+      const result = await createLobby(username.trim(), { bombEnabled, turnTimerSeconds: 60, botCount, mode: gameMode });
       if (result.success) {
         useGameStore.setState({
           lobbyCode: result.lobby?.code,
@@ -94,6 +122,57 @@ export function LobbyScreen(): React.ReactElement {
     setError('');
     setUsername('');
     setLobbyCode('');
+  };
+
+  const handleResumeGame = async (gameId: string): Promise<void> => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await resumeGame(gameId);
+      if (result.success && result.game && result.playerId) {
+        const game = result.game;
+        const me = game.players.find((p: any) => p.id === result.playerId);
+        const lobbyPlayersFromGame = game.players.map((p: any) => ({
+          id: p.id,
+          username: p.username,
+          ready: true,
+          isBot: p.isBot ?? false,
+        }));
+        useGameStore.setState({
+          gameStatus: 'playing',
+          currentPlayerId: result.playerId,
+          gameId: game.id,
+          lobbyCode: game.lobbyCode,
+          playPile: game.playPile ?? [],
+          hand: me?.hand ?? [],
+          tableCards: me?.tableVisible ?? [],
+          blindCards: me?.tableBlind ?? [],
+          bombEnabled: game.bombEnabled ?? true,
+          lobbyPlayers: lobbyPlayersFromGame,
+          phase: game.status === 'swapping' ? 'swapping' : 'playing',
+          swappedCount: (game.swappedPlayers ?? []).length,
+          totalPlayers: game.players.length,
+          currentPlayerUsername: game.players[game.currentPlayerIndex]?.username,
+          currentTurnPlayerId: game.playOrder?.[game.currentPlayerIndex],
+          deckCount: game.deck?.length ?? 0,
+          activeConstraints: game.activeConstraints ?? { sevenOrUnder: false, skipCount: 0 },
+          blindReveal: null,
+          pickupAnimation: false,
+          pickupPlayerId: null,
+          bombAnimation: false,
+        });
+      } else {
+        setError(result.reason === 'NOT_AUTHENTICATED'
+          ? 'Sign in to resume games.'
+          : result.reason === 'NOT_IN_GAME'
+          ? 'You are not in that game.'
+          : 'Could not resume game.');
+      }
+    } catch {
+      setError('Connection error. Try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ── In a lobby ─────────────────────────────── */
@@ -163,7 +242,26 @@ export function LobbyScreen(): React.ReactElement {
   /* ── Pre-lobby screens ───────────────────────── */
   return (
     <div className="lobby-screen">
-      <div className="lobby-panel animate-scale-in">
+      <div className="lobby-panel animate-scale-in" style={{ position: 'relative' }}>
+        {/* Account button — subtle, top-right corner of the panel */}
+        {mode === 'home' && (
+          <button
+            className="lobby-account-btn"
+            onClick={() => setMode('account')}
+            aria-label="Account settings"
+          >
+            &#9881;
+          </button>
+        )}
+
+        {mode === 'account' && (
+          <AccountScreen onBack={() => setMode('home')} />
+        )}
+
+        {mode === 'leaderboard' && (
+          <LeaderboardScreen onBack={() => setMode('home')} />
+        )}
+
         {mode === 'home' && (
           <div className="lobby-home animate-fade-in">
             <div className="lobby-home-top">
@@ -197,7 +295,30 @@ export function LobbyScreen(): React.ReactElement {
               <Button variant="secondary" onClick={() => setMode('join')}>
                 Join with Code
               </Button>
+              <Button variant="secondary" onClick={() => setMode('leaderboard')}>
+                Leaderboard
+              </Button>
             </div>
+            {activeGames.length > 0 && (
+              <div className="lobby-active-games">
+                <p className="lobby-active-games-label">Resume a game</p>
+                {activeGames.map((g: ActiveGameSummary) => (
+                  <button
+                    key={g.id}
+                    className="lobby-active-game-card"
+                    onClick={() => handleResumeGame(g.id)}
+                    disabled={loading}
+                  >
+                    <span className="lobby-active-game-code">{g.lobby_code}</span>
+                    <span className={`lobby-active-game-status ${g.current_turn_user_id === authUser?.id ? 'your-turn' : ''}`}>
+                      {g.current_turn_user_id === authUser?.id ? 'Your turn' : 'Waiting...'}
+                    </span>
+                    <span className="lobby-active-game-time">{timeAgo(g.last_action_at)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {error && <p className="lobby-error">{error}</p>}
             {!connected && (
               <p className="lobby-error lobby-offline">Connecting to server...</p>
             )}
@@ -246,6 +367,15 @@ export function LobbyScreen(): React.ReactElement {
                   >+</button>
                 </div>
               </div>
+              <label className="lobby-checkbox">
+                <input
+                  type="checkbox"
+                  checked={gameMode === 'live'}
+                  onChange={(e) => setGameMode(e.target.checked ? 'live' : 'async')}
+                />
+                <span className="lobby-checkbox-track" />
+                <span className="lobby-checkbox-label">Live mode (bots take over on disconnect)</span>
+              </label>
             </div>
             {error && <p className="lobby-error">{error}</p>}
             <Button variant="primary" onClick={handleCreateLobby} disabled={loading}>

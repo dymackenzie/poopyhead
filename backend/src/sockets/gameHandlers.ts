@@ -12,6 +12,9 @@
 
 import { Socket, Server } from 'socket.io';
 import { Lobby } from '../services/LobbyManager.js';
+import { saveGame, loadGame } from '../services/GameStateRepository.js';
+import { supabaseAdmin } from '../supabase/client.js';
+import { notifyTurn } from '../services/PushService.js';
 import { GameInstance, PlayCardActionOutput } from '../services/GameManager.js';
 import {
   createLobby,
@@ -98,6 +101,10 @@ export function setupSocketHandlers(io: Server, ns: PoopyheadNamespace) {
       handleReconnectSession(socket, data, callback, io, ns);
     });
 
+    socket.on('resumeGame', (data, callback) => {
+      handleResumeGame(socket, data, callback, io, ns);
+    });
+
     socket.on('heartbeat', () => {
       const playerId = ns.socketToPlayer.get(socket.id);
       if (playerId) {
@@ -141,7 +148,8 @@ function broadcastPlayResult(
   const endCheck = checkGameEnd(updatedGame);
   if (endCheck.ended) {
     const finalGame = endGame(updatedGame, endCheck.loserId!);
-    ns.games.set(updatedGame.id, finalGame);
+    persistGame(finalGame, ns);
+    recordStats(finalGame);
     const loserPlayer = updatedGame.players.find(p => p.id === endCheck.loserId);
     io.to(`lobby:${originalLobbyCode}`).emit('gameEnded', {
       loserId: endCheck.loserId,
@@ -185,6 +193,7 @@ function broadcastPlayResult(
   }
 
   scheduleNextAITurnIfNeeded(updatedGame, io, ns);
+  maybeNotifyTurn(updatedGame, ns);
 }
 
 /**
@@ -211,11 +220,67 @@ function broadcastPickupResult(
     players: buildPublicPlayerState(updatedGame),
   });
   scheduleNextAITurnIfNeeded(updatedGame, io, ns);
+  maybeNotifyTurn(updatedGame, ns);
 }
 
 // ─────────────────────────────────────────────────────────────
 // AI TURN EXECUTION
 // ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
+// PERSISTENCE HELPERS
+// ─────────────────────────────────────────────────────────────
+
+/** Update in-memory cache and fire-and-forget DB write. Never blocks broadcasts. */
+function persistGame(game: GameInstance, ns: PoopyheadNamespace): void {
+  ns.games.set(game.id, game);
+  const lobby = ns.lobbies.get(game.lobbyCode);
+  saveGame(game, lobby?.settings.mode ?? 'async').catch(e =>
+    console.error('[Persist] save failed', game.id, e)
+  );
+}
+
+/** Look up game from cache; hydrate from DB on cold-start miss. */
+async function getGame(gameId: string, ns: PoopyheadNamespace): Promise<GameInstance | null> {
+  let game = ns.games.get(gameId);
+  if (!game) {
+    game = await loadGame(gameId) ?? undefined;
+    if (game) ns.games.set(gameId, game);
+  }
+  return game ?? null;
+}
+
+/** Record outcome stats for all authenticated non-replaced players. Fire-and-forget. */
+function recordStats(game: GameInstance): void {
+  const authPlayers = game.players.filter(p => !p.isBot && p.userId && !p.wasReplaced);
+  for (const p of authPlayers) {
+    Promise.resolve(
+      supabaseAdmin.rpc('increment_player_stats', {
+        p_user_id: p.userId,
+        p_was_loser: p.id === game.loser,
+      })
+    ).catch((e: unknown) => console.error('[Stats] increment failed', p.userId, e));
+  }
+}
+
+/**
+ * Send a push notification to the next player if they are not currently connected.
+ * Only fires for authenticated non-bot players in async-mode games.
+ */
+function maybeNotifyTurn(game: GameInstance, ns: PoopyheadNamespace): void {
+  const nextPlayer = game.players[game.currentPlayerIndex];
+  if (!nextPlayer?.userId || nextPlayer.isBot) return;
+  if (ns.playerToSocket.has(nextPlayer.id)) return; // player is online
+
+  const lastTurn = game.turnHistory[game.turnHistory.length - 1];
+  const prevPlayer = lastTurn ? game.players.find(p => p.id === lastTurn.playerId) : undefined;
+
+  notifyTurn(nextPlayer.userId, {
+    gameId: game.id,
+    lobbyCode: game.lobbyCode,
+    opponentName: prevPlayer?.username,
+  }).catch((e: unknown) => console.error('[Push] notifyTurn failed', e));
+}
 
 /**
  * If the current player is a bot, schedules an AI turn after a short delay.
@@ -255,7 +320,8 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
   const endCheck = checkGameEnd(game);
   if (endCheck.ended) {
     const finalGame = endGame(game, endCheck.loserId!);
-    ns.games.set(game.id, finalGame);
+    persistGame(finalGame, ns);
+    recordStats(finalGame);
     const loserPlayer = game.players.find(p => p.id === endCheck.loserId);
     io.to(`lobby:${game.lobbyCode}`).emit('gameEnded', {
       loserId: endCheck.loserId,
@@ -270,7 +336,7 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
   if (player.hand.length === 0 && player.tableVisible.length === 0 && player.tableBlind.length === 0) {
     const nextIndex = advancePlayerIndex(game.currentPlayerIndex, 1, game.playOrder.length, game.direction);
     const advanced = { ...game, currentPlayerIndex: nextIndex };
-    ns.games.set(game.id, advanced);
+    persistGame(advanced, ns);
     io.to(`lobby:${game.lobbyCode}`).emit('cardPlayed', {
       playerId: currentPlayerId,
       cardsPlayed: [],
@@ -289,7 +355,7 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
     const cardId = player.tableBlind[0].id;
     const result = processPlayCardAction({ game, playerId: currentPlayerId, cardIds: [cardId] });
     if (result.success && result.updatedGame) {
-      ns.games.set(game.id, result.updatedGame);
+      persistGame(result.updatedGame, ns);
       broadcastPlayResult(result.updatedGame, game.lobbyCode, currentPlayerId, [cardId], result, io, ns);
       return;
     }
@@ -312,7 +378,7 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
     const cardIds = rankGroups[rank];
     const result = processPlayCardAction({ game, playerId: currentPlayerId, cardIds });
     if (result.success && result.updatedGame) {
-      ns.games.set(game.id, result.updatedGame);
+      persistGame(result.updatedGame, ns);
       broadcastPlayResult(result.updatedGame, game.lobbyCode, currentPlayerId, cardIds, result, io, ns);
       return;
     }
@@ -322,7 +388,7 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
   if (game.playPile.length > 0) {
     const result = processPickupAction({ game, playerId: currentPlayerId });
     if (result.success && result.updatedGame) {
-      ns.games.set(game.id, result.updatedGame);
+      persistGame(result.updatedGame, ns);
       broadcastPickupResult(result.updatedGame, game.lobbyCode, currentPlayerId, io, ns);
       return;
     }
@@ -331,7 +397,7 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
   // Pile empty and nothing valid — advance turn and broadcast so frontend doesn't freeze
   const nextIndex = advancePlayerIndex(game.currentPlayerIndex, 1, game.playOrder.length, game.direction);
   const advanced = { ...game, currentPlayerIndex: nextIndex };
-  ns.games.set(game.id, advanced);
+  persistGame(advanced, ns);
   io.to(`lobby:${game.lobbyCode}`).emit('cardPlayed', {
     playerId: currentPlayerId,
     cardsPlayed: [],
@@ -365,7 +431,7 @@ function processBotSwaps(game: GameInstance, io: Server, ns: PoopyheadNamespace)
   }
 
   if (currentGame === game) return; // no bots swapped
-  ns.games.set(game.id, currentGame);
+  persistGame(currentGame, ns);
 
   const payload: Record<string, unknown> = {
     swappedCount: currentGame.swappedPlayers.length,
@@ -392,7 +458,7 @@ function processBotSwaps(game: GameInstance, io: Server, ns: PoopyheadNamespace)
 
 function handleCreateLobby(
   socket: Socket,
-  data: { username: string; bombEnabled: boolean; turnTimerSeconds: number; botCount?: number },
+  data: { username: string; bombEnabled: boolean; turnTimerSeconds: number; botCount?: number; mode?: 'live' | 'async' },
   callback: Function,
   io: Server,
   ns: PoopyheadNamespace
@@ -405,7 +471,7 @@ function handleCreateLobby(
       data.username,
       isGuest,
       socket.id,
-      { bombEnabled: data.bombEnabled, turnTimerSeconds: data.turnTimerSeconds }
+      { bombEnabled: data.bombEnabled, turnTimerSeconds: data.turnTimerSeconds, mode: data.mode }
     );
 
     if (data.botCount && data.botCount > 0) {
@@ -523,12 +589,14 @@ function handleStartGame(
         username: p.username,
         poopyheadCount: 0,
         isBot: p.isBot || false,
+        userId: p.userId,
       })),
       settings: lobby.settings,
       direction: data.direction,
+      mode: lobby.settings.mode,
     });
 
-    ns.games.set(game.id, game);
+    persistGame(game, ns);
 
     // Create sessions for human players only (bots don't reconnect)
     const sessions: any = {};
@@ -562,7 +630,7 @@ function handleStartGame(
   }
 }
 
-function handleSwapCards(
+async function handleSwapCards(
   socket: Socket,
   data: { gameId: string; playerId: string; cardIds: string[] },
   callback: Function,
@@ -570,7 +638,7 @@ function handleSwapCards(
   ns: PoopyheadNamespace
 ) {
   try {
-    const game = ns.games.get(data.gameId);
+    const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
 
     const swapResult = applySwap({
@@ -582,7 +650,7 @@ function handleSwapCards(
     if (!swapResult.success) return callback({ success: false, reason: swapResult.reason });
 
     const updatedGame = swapResult.updatedGame!;
-    ns.games.set(data.gameId, updatedGame);
+    persistGame(updatedGame, ns);
 
     callback({ success: true });
 
@@ -612,7 +680,7 @@ function handleSwapCards(
   }
 }
 
-function handlePlayCard(
+async function handlePlayCard(
   socket: Socket,
   data: { gameId: string; playerId: string; cardIds: string[] },
   callback: Function,
@@ -620,7 +688,7 @@ function handlePlayCard(
   ns: PoopyheadNamespace
 ) {
   try {
-    const game = ns.games.get(data.gameId);
+    const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
 
     const actionResult = processPlayCardAction({
@@ -632,7 +700,7 @@ function handlePlayCard(
     if (!actionResult.success) return callback({ success: false, reason: actionResult.reason });
 
     const updatedGame = actionResult.updatedGame!;
-    ns.games.set(data.gameId, updatedGame);
+    persistGame(updatedGame, ns);
 
     if (actionResult.eventType === 'blind_fail') {
       const me = updatedGame.players.find(p => p.id === data.playerId);
@@ -649,7 +717,7 @@ function handlePlayCard(
   }
 }
 
-function handlePickupPile(
+async function handlePickupPile(
   socket: Socket,
   data: { gameId: string; playerId: string },
   callback: Function,
@@ -657,14 +725,14 @@ function handlePickupPile(
   ns: PoopyheadNamespace
 ) {
   try {
-    const game = ns.games.get(data.gameId);
+    const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
 
     const result = processPickupAction({ game, playerId: data.playerId });
     if (!result.success) return callback({ success: false, reason: result.reason });
 
     const updatedGame = result.updatedGame!;
-    ns.games.set(data.gameId, updatedGame);
+    persistGame(updatedGame, ns);
 
     const me = updatedGame.players.find(p => p.id === data.playerId);
     callback({ success: true, hand: me?.hand || [] });
@@ -723,7 +791,7 @@ function debugAutoPlayOneTurn(game: GameInstance): GameInstance {
   return { ...game, currentPlayerIndex: nextIndex };
 }
 
-function handleDebugAutoPlay(
+async function handleDebugAutoPlay(
   socket: Socket,
   data: { gameId: string },
   callback: Function,
@@ -731,7 +799,7 @@ function handleDebugAutoPlay(
   ns: PoopyheadNamespace
 ) {
   try {
-    const game = ns.games.get(data.gameId);
+    const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
     if (game.status !== 'playing') return callback({ success: false, reason: 'GAME_NOT_PLAYING' });
 
@@ -744,7 +812,7 @@ function handleDebugAutoPlay(
       iterations++;
     }
 
-    ns.games.set(data.gameId, currentGame);
+    persistGame(currentGame, ns);
 
     const currentTurnPlayer = currentGame.players[currentGame.currentPlayerIndex];
     callback({ success: true, iterations });
@@ -762,7 +830,7 @@ function handleDebugAutoPlay(
   }
 }
 
-function handleRematch(
+async function handleRematch(
   socket: Socket,
   data: { code: string },
   callback: Function,
@@ -773,7 +841,7 @@ function handleRematch(
     const lobby = ns.lobbies.get(data.code);
     if (!lobby) return callback({ success: false, reason: 'LOBBY_NOT_FOUND' });
 
-    const existingGame = lobby.currentGameId ? ns.games.get(lobby.currentGameId) : null;
+    const existingGame = lobby.currentGameId ? await getGame(lobby.currentGameId, ns) : null;
     if (existingGame && existingGame.status !== 'ended') {
       return callback({ success: false, reason: 'GAME_STILL_ACTIVE' });
     }
@@ -785,12 +853,14 @@ function handleRematch(
         username: p.username,
         poopyheadCount: 0,
         isBot: p.isBot || false,
+        userId: p.userId,
       })),
       settings: lobby.settings,
       direction: 'clockwise',
+      mode: lobby.settings.mode,
     });
 
-    ns.games.set(game.id, game);
+    persistGame(game, ns);
     const updatedLobby = updateLobbyStatus(lobby, 'playing', game.id);
     ns.lobbies.set(data.code, updatedLobby);
 
@@ -845,9 +915,12 @@ function handleDisconnect(socket: Socket, io: Server, ns: PoopyheadNamespace) {
         }
       }
 
-      // Schedule bot takeover if player is in an active game
+      // Schedule bot takeover if player is in an active live-mode game
       const game = findGameForPlayer(playerId, ns);
       if (game) {
+        const lobby = ns.lobbies.get(game.lobbyCode);
+        if (lobby?.settings.mode !== 'live') return; // async games never auto-bot
+
         const timeout = setTimeout(() => {
           const currentGame = ns.games.get(game.id);
           if (!currentGame || currentGame.status !== 'playing') return;
@@ -856,10 +929,10 @@ function handleDisconnect(socket: Socket, io: Server, ns: PoopyheadNamespace) {
           const updatedGame = {
             ...currentGame,
             players: currentGame.players.map(p =>
-              p.id === playerId ? { ...p, isBot: true } : p
+              p.id === playerId ? { ...p, isBot: true, wasReplaced: true } : p
             ),
           };
-          ns.games.set(game.id, updatedGame);
+          persistGame(updatedGame, ns);
           ns.pendingBotTakeovers.delete(playerId);
 
           const takenOverPlayer = updatedGame.players.find(p => p.id === playerId);
@@ -880,7 +953,61 @@ function handleDisconnect(socket: Socket, io: Server, ns: PoopyheadNamespace) {
   }
 }
 
-function handleReconnectSession(
+async function handleResumeGame(
+  socket: Socket,
+  data: { gameId: string },
+  callback: Function,
+  io: Server,
+  ns: PoopyheadNamespace
+) {
+  try {
+    const userId = socket.data.userId as string | null;
+    if (!userId) return callback({ success: false, reason: 'NOT_AUTHENTICATED' });
+
+    const game = await getGame(data.gameId, ns);
+    if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
+
+    const player = game.players.find(p => p.userId === userId);
+    if (!player) return callback({ success: false, reason: 'NOT_IN_GAME' });
+
+    // Cancel any pending bot takeover for this player
+    const pendingTakeover = ns.pendingBotTakeovers.get(player.id);
+    if (pendingTakeover) {
+      clearTimeout(pendingTakeover);
+      ns.pendingBotTakeovers.delete(player.id);
+    }
+
+    // Reattach socket mappings
+    ns.playerToSocket.set(player.id, socket.id);
+    ns.socketToPlayer.set(socket.id, player.id);
+    socket.join(`lobby:${game.lobbyCode}`);
+
+    // Un-bot if bot takeover already fired
+    let finalGame = game;
+    if (player.isBot) {
+      finalGame = {
+        ...game,
+        players: game.players.map(p =>
+          p.id === player.id ? { ...p, isBot: false, wasReplaced: false } : p
+        ),
+      };
+      persistGame(finalGame, ns);
+    }
+
+    io.to(`lobby:${game.lobbyCode}`).emit('playerReconnected', {
+      playerId: player.id,
+      gameId: game.id,
+    });
+
+    callback({ success: true, game: finalGame, playerId: player.id });
+
+    console.log(`[Resume] ${player.username} resumed game ${data.gameId}`);
+  } catch (error) {
+    callback({ success: false, reason: 'ERROR', error: (error as Error).message });
+  }
+}
+
+async function handleReconnectSession(
   socket: Socket,
   data: { sessionId: string; gameId: string },
   callback: Function,
@@ -891,7 +1018,7 @@ function handleReconnectSession(
     const session = getSession(data.sessionId);
     if (!session) return callback({ success: false, reason: 'SESSION_NOT_FOUND' });
 
-    const game = ns.games.get(data.gameId);
+    const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
 
     const recoveryResult = handleReconnect(data.sessionId, socket.id);
@@ -905,15 +1032,15 @@ function handleReconnectSession(
     }
 
     // Un-bot the player if takeover already fired
-    const currentGame = ns.games.get(data.gameId);
+    const currentGame = await getGame(data.gameId, ns);
     if (currentGame) {
       const updatedGame = {
         ...currentGame,
         players: currentGame.players.map(p =>
-          p.id === session.playerId ? { ...p, isBot: false } : p
+          p.id === session.playerId ? { ...p, isBot: false, wasReplaced: false } : p
         ),
       };
-      ns.games.set(data.gameId, updatedGame);
+      persistGame(updatedGame, ns);
     }
 
     ns.playerToSocket.set(session.playerId, socket.id);

@@ -19,6 +19,7 @@ export interface Lobby {
   settings: {
     bombEnabled: boolean;
     turnTimerSeconds: number;
+    mode: 'live' | 'async';
   };
   maxPlayers: number;
 }
@@ -55,7 +56,7 @@ export function createLobby(
   username: string,
   isGuest: boolean,
   socketId: string,
-  settings: { bombEnabled: boolean; turnTimerSeconds: number }
+  settings: { bombEnabled: boolean; turnTimerSeconds: number; mode?: 'live' | 'async' }
 ): Lobby {
   const playerId = uuid();
   
@@ -76,7 +77,7 @@ export function createLobby(
       },
     ],
     status: 'waiting',
-    settings,
+    settings: { ...settings, mode: settings.mode ?? 'async' },
     maxPlayers: 5,
   };
 }

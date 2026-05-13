@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand';
-import type { GameCard, GameStatePatch, LobbyPlayer, LobbySettings } from './types/game';
+import type { ActiveGameSummary, GameCard, GameStatePatch, LobbyPlayer, LobbySettings } from './types/game';
 
 export type GamePlayer = LobbyPlayer;
 
@@ -18,6 +18,16 @@ export interface BlindReveal {
 }
 
 export interface GameState {
+  // Auth
+  authUser: { id: string; isAnonymous: boolean } | null;
+  authToken: string | null;
+
+  // Active games (for resume flow)
+  activeGames: ActiveGameSummary[];
+
+  // Push notifications
+  pushEnabled: boolean;
+
   // Connection & Session
   connected: boolean;
   sessionId?: string;
@@ -79,10 +89,17 @@ export interface GameState {
   updateGameState: (state: Partial<GameState> | GameStatePatch) => void;
   updatePlayableCards: (cardIds: string[]) => void;
   setGameStatus: (status: GameStatus) => void;
+  setAuth: (user: { id: string; isAnonymous: boolean } | null, token: string | null) => void;
+  setActiveGames: (games: ActiveGameSummary[]) => void;
+  setPushEnabled: (enabled: boolean) => void;
 }
 
 export const useGameStore = create<GameState>((set) => ({
   // Initial state
+  authUser: null,
+  authToken: null,
+  activeGames: [],
+  pushEnabled: false,
   connected: false,
   lobbyPlayers: [],
   canStartGame: false,
@@ -143,4 +160,8 @@ export const useGameStore = create<GameState>((set) => ({
   setGameStatus: (status: GameStatus) => {
     set({ gameStatus: status });
   },
+
+  setAuth: (user, token) => set({ authUser: user, authToken: token }),
+  setActiveGames: (games) => set({ activeGames: games }),
+  setPushEnabled: (enabled) => set({ pushEnabled: enabled }),
 }));

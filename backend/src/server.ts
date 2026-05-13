@@ -16,6 +16,9 @@ import cors from 'cors';
 import { setupSocketHandlers, PoopyheadNamespace } from './sockets/gameHandlers';
 import { supabaseAdmin } from './supabase/client';
 import { authMiddleware } from './sockets/authMiddleware';
+import gamesRouter from './api/gamesRouter';
+import pushRouter from './api/pushRouter';
+import leaderboardRouter from './api/leaderboardRouter';
 
 const app = express();
 const httpServer = createServer(app);
@@ -40,7 +43,11 @@ const gameNamespace: PoopyheadNamespace = {
   pendingBotTakeovers: new Map(),
 };
 
-// API Routes (for future use)
+// API Routes
+app.use(gamesRouter);
+app.use(pushRouter);
+app.use(leaderboardRouter);
+
 app.get('/health', async (req, res) => {
   let db: 'ok' | 'error' = 'error';
   try {

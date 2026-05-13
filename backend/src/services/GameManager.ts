@@ -37,6 +37,7 @@ function skipDonePlayers(
 export interface GameInstance {
   id: string;
   lobbyCode: string;
+  mode: 'live' | 'async';
   players: GamePlayer[];
   deck: Card[];
   playPile: Card[];
@@ -71,12 +72,14 @@ export interface GameInstance {
 
 export interface GamePlayer {
   id: string;
+  userId?: string;
   username: string;
   hand: Card[];
   tableVisible: Card[];
   tableBlind: Card[];
   poopyheadCount: number;
   isBot?: boolean;
+  wasReplaced?: boolean;
 }
 
 export interface GameTurn {
@@ -93,9 +96,10 @@ export interface GameTurn {
  */
 export interface CreateGameInput {
   lobbyCode: string;
-  players: Array<{ id: string; username: string; poopyheadCount: number; isBot?: boolean }>;
+  players: Array<{ id: string; username: string; poopyheadCount: number; isBot?: boolean; userId?: string }>;
   settings: { bombEnabled: boolean; turnTimerSeconds: number };
   direction: 'clockwise' | 'counterclockwise';
+  mode?: 'live' | 'async';
 }
 
 export function createGame(input: CreateGameInput): GameInstance {
@@ -109,8 +113,10 @@ export function createGame(input: CreateGameInput): GameInstance {
   const gameInstance: GameInstance = {
     id: uuid(),
     lobbyCode: input.lobbyCode,
+    mode: input.mode ?? 'async',
     players: input.players.map((p, i) => ({
       id: p.id,
+      userId: p.userId,
       username: p.username,
       isBot: p.isBot,
       // During swapping phase hand = all dealt hand cards (tableVisible not yet assigned).

@@ -1,0 +1,316 @@
+/* =============================================
+   Leaderboard Screen
+   ============================================= */
+
+.leaderboard-screen {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5);
+  gap: var(--space-5);
+  position: relative;
+}
+
+/* Notebook margin line — matches account-screen::before */
+.leaderboard-screen::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 36px;
+  bottom: 0;
+  width: 2px;
+  background: rgba(232, 51, 42, 0.25);
+  pointer-events: none;
+}
+
+/* ── Back button ───────────────────────────── */
+
+.leaderboard-back {
+  align-self: flex-start;
+}
+
+/* ── Title ─────────────────────────────────── */
+
+.leaderboard-title {
+  font-size: var(--font-xl);
+  font-weight: 900;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+/* ── Loading / Empty ───────────────────────── */
+
+.leaderboard-loading {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+  padding: var(--space-4) 0;
+  text-align: center;
+}
+
+.leaderboard-empty {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0;
+  padding: var(--space-4) 0;
+  text-align: center;
+  line-height: 1.55;
+}
+
+/* ── Toast notification ────────────────────── */
+
+.leaderboard-toast {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--accent-green);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  background: rgba(40, 167, 69, 0.08);
+  border-radius: var(--radius-sm);
+  border: 1.5px solid rgba(40, 167, 69, 0.25);
+  animation: leaderboard-toast-in var(--timing-fast) ease-out;
+}
+
+@keyframes leaderboard-toast-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Table ─────────────────────────────────── */
+
+.leaderboard-table {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid var(--color-black);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+/*
+  Grid columns:
+  [Name] 1fr | [Played] 40px | [Wins] 40px | [Win%] 44px | [Poopyhead] 44px | [Streak] 40px | [Menu] 28px
+*/
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 1fr 40px 40px 44px 44px 40px 28px;
+  align-items: center;
+  min-height: 44px;
+  border-bottom: 1px solid var(--border-soft);
+  position: relative;
+  transition: background var(--timing-fast);
+}
+
+.leaderboard-row:last-child {
+  border-bottom: none;
+}
+
+/* Header row */
+.leaderboard-row--header {
+  background: var(--bg-surface-2);
+  min-height: 36px;
+  border-bottom: 2px solid var(--color-black);
+}
+
+.leaderboard-row--header:hover {
+  background: var(--bg-surface-2);
+}
+
+/* Self row */
+.leaderboard-row--self {
+  background: var(--bg-surface-2);
+}
+
+/* Data row hover */
+.leaderboard-row:not(.leaderboard-row--header):hover {
+  background: var(--bg-surface-2);
+}
+
+/* ── Cells ─────────────────────────────────── */
+
+.leaderboard-cell {
+  padding: var(--space-2) var(--space-2);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+/* First cell (name) gets left padding to stay off the margin line */
+.leaderboard-cell:first-child {
+  padding-left: var(--space-3);
+}
+
+/* Header cells */
+.leaderboard-row--header .leaderboard-cell {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--timing-fast);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.leaderboard-row--header .leaderboard-cell:hover {
+  color: var(--text-primary);
+}
+
+/* Non-sortable header cell (menu column) */
+.leaderboard-cell--no-sort {
+  cursor: default !important;
+}
+
+/* Active sort column indicator */
+.leaderboard-sort-indicator {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+/* Name cell — self row */
+.leaderboard-row--self .leaderboard-cell--name {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* Anonymous name style */
+.leaderboard-name--anonymous {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.leaderboard-anon-note {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-left: 4px;
+}
+
+/* Numeric data cells — right-align for readability */
+.leaderboard-cell--numeric {
+  text-align: right;
+  padding-right: var(--space-2);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+/* ── Poopyhead column — hide on narrow screens ── */
+
+.leaderboard-cell--poop {
+  /* visible by default */
+}
+
+@media (max-width: 359px) {
+  .leaderboard-row {
+    grid-template-columns: 1fr 40px 40px 44px 0px 40px 28px;
+  }
+
+  .leaderboard-cell--poop {
+    display: none;
+  }
+}
+
+/* ── Overflow menu button ──────────────────── */
+
+.leaderboard-menu-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaderboard-menu-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  transition: color var(--timing-fast), background var(--timing-fast);
+  line-height: 1;
+  padding: 0;
+  /* Ensure 28px minimum tap target handled by 44px row height */
+}
+
+.leaderboard-menu-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-elevated);
+}
+
+/* ── Dropdown popover ──────────────────────── */
+
+.leaderboard-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  background: var(--bg-surface);
+  border: 2px solid var(--color-black);
+  border-radius: var(--radius-sm);
+  box-shadow: 3px 3px 0 var(--color-black);
+  min-width: 180px;
+  overflow: hidden;
+  animation: leaderboard-dropdown-in var(--timing-fast) ease-out;
+}
+
+@keyframes leaderboard-dropdown-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.leaderboard-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--accent-red);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--timing-fast);
+  min-height: 44px;
+  line-height: 1;
+}
+
+.leaderboard-dropdown-item:hover {
+  background: rgba(232, 51, 42, 0.06);
+}
+
+.leaderboard-dropdown-cancel {
+  display: block;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border-soft);
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--timing-fast);
+  min-height: 44px;
+  line-height: 1;
+}
+
+.leaderboard-dropdown-cancel:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-secondary);
+}

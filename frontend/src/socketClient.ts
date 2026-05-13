@@ -7,7 +7,7 @@
 /// <reference types="vite/client" />
 
 import { io, Socket } from 'socket.io-client';
-import type { GameCard, GameStatePatch, LobbyResponse, LobbySettings, PlayerJoinedPayload, PlayerReadyPayload, ReadyResponse } from './types/game';
+import type { GameCard, GameStatePatch, LobbyResponse, LobbySettings, PlayerJoinedPayload, PlayerReadyPayload, ReadyResponse, ResumeGameResponse } from './types/game';
 
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -123,6 +123,7 @@ export function createLobby(
       bombEnabled: settings.bombEnabled,
       turnTimerSeconds: settings.turnTimerSeconds,
       botCount: settings.botCount ?? 0,
+      mode: settings.mode ?? 'async',
     }, resolve);
   });
 }
@@ -188,6 +189,15 @@ export function pickupPile(gameId: string, playerId: string): Promise<unknown> {
 export function reconnectSession(sessionId: string, gameId: string): Promise<unknown> {
   return new Promise((resolve) => {
     emitEvent('reconnect', { sessionId, gameId }, resolve);
+  });
+}
+
+/**
+ * Resume an in-progress game (async reconnect flow).
+ */
+export function resumeGame(gameId: string): Promise<ResumeGameResponse> {
+  return new Promise((resolve) => {
+    emitEvent('resumeGame', { gameId }, resolve);
   });
 }
 

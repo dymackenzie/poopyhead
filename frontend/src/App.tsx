@@ -4,7 +4,7 @@
 
 import React, { useEffect } from 'react';
 import { useGameStore } from './store';
-import { initSocket } from './socketClient';
+import { initSocket, resumeGame } from './socketClient';
 import { supabase, authReady } from './supabase';
 import { getSocket } from './socketClient';
 import LobbyScreen from './screens/LobbyScreen';
@@ -18,9 +18,15 @@ export function App(): React.ReactElement {
   const gameStatus = useGameStore((state) => state.gameStatus);
   const connect = useGameStore((state) => state.connect);
   const updateGameState = useGameStore((state) => state.updateGameState);
+  const setAuth = useGameStore((state) => state.setAuth);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setAuth({ id: session.user.id, isAnonymous: session.user.is_anonymous ?? false }, session.access_token);
+      } else {
+        setAuth(null, null);
+      }
       if (event === 'TOKEN_REFRESHED' && session) {
         const s = getSocket();
         if (s) {
@@ -34,9 +40,42 @@ export function App(): React.ReactElement {
     const boot = async () => {
       await authReady;
       const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setAuth({ id: session.user.id, isAnonymous: session.user.is_anonymous ?? false }, session.access_token);
+      }
       initSocket(session?.access_token ?? null, {
       onConnect: () => {
         connect();
+        // Handle ?resume=<gameId> deep link from push notification
+        const params = new URLSearchParams(window.location.search);
+        const resumeGameId = params.get('resume');
+        if (resumeGameId) {
+          window.history.replaceState({}, '', window.location.pathname);
+          resumeGame(resumeGameId).then((res) => {
+            if (!res.success || !res.game || !res.playerId) return;
+            const game = res.game as any;
+            const me = game.players?.find((p: any) => p.id === res.playerId);
+            const lobbyPlayers = game.players?.map((p: any) => ({ id: p.id, username: p.username, ready: true })) ?? [];
+            useGameStore.setState({
+              gameStatus: 'playing',
+              gameId: game.id,
+              currentPlayerId: res.playerId,
+              lobbyCode: game.lobbyCode,
+              lobbyPlayers,
+              phase: game.status === 'swapping' ? 'swapping' : 'playing',
+              hand: me?.hand ?? [],
+              tableCards: me?.tableVisible ?? [],
+              blindCards: me?.tableBlind ?? [],
+              playPile: game.playPile ?? [],
+              deckCount: game.deck?.length ?? 0,
+              bombEnabled: game.bombEnabled ?? true,
+              activeConstraints: game.activeConstraints ?? { sevenOrUnder: false, skipCount: 0 },
+              currentTurnPlayerId: game.playOrder?.[game.currentPlayerIndex],
+              swappedCount: (game.swappedPlayers ?? []).length,
+              totalPlayers: game.players?.length ?? 0,
+            });
+          });
+        }
       },
       onPlayerJoined: (data: PlayerJoinedPayload) => {
         if (data?.lobby) {

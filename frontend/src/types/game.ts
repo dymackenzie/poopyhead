@@ -26,6 +26,7 @@ export interface LobbySettings {
   bombEnabled: boolean;
   turnTimerSeconds: number;
   botCount?: number;
+  mode?: 'live' | 'async';
 }
 
 export interface LobbyResponse {
@@ -38,6 +39,21 @@ export interface LobbyResponse {
 export interface ReadyResponse extends LobbyResponse {
   ready?: boolean;
   canStart?: boolean;
+}
+
+export interface ActiveGameSummary {
+  id: string;
+  lobby_code: string;
+  status: string;
+  last_action_at: string;
+  current_turn_user_id: string | null;
+}
+
+export interface ResumeGameResponse {
+  success: boolean;
+  game?: any;
+  playerId?: string;
+  reason?: string;
 }
 
 export interface GameStatePatch {
