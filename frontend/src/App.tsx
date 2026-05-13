@@ -5,6 +5,8 @@
 import React, { useEffect } from 'react';
 import { useGameStore } from './store';
 import { initSocket } from './socketClient';
+import { supabase, authReady } from './supabase';
+import { getSocket } from './socketClient';
 import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 import EndgameScreen from './screens/EndgameScreen';
@@ -18,8 +20,21 @@ export function App(): React.ReactElement {
   const updateGameState = useGameStore((state) => state.updateGameState);
 
   useEffect(() => {
-    // Initialize socket connection
-    initSocket({
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'TOKEN_REFRESHED' && session) {
+        const s = getSocket();
+        if (s) {
+          (s as any).auth = { token: session.access_token };
+          s.disconnect();
+          s.connect();
+        }
+      }
+    });
+
+    const boot = async () => {
+      await authReady;
+      const { data: { session } } = await supabase.auth.getSession();
+      initSocket(session?.access_token ?? null, {
       onConnect: () => {
         connect();
       },
@@ -243,7 +258,10 @@ export function App(): React.ReactElement {
           lobbyPlayers: updatedLobbyPlayers,
         });
       },
-    });
+      });
+    };
+    boot();
+    return () => subscription.unsubscribe();
   }, []);
 
   return (

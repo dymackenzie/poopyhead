@@ -392,15 +392,16 @@ function processBotSwaps(game: GameInstance, io: Server, ns: PoopyheadNamespace)
 
 function handleCreateLobby(
   socket: Socket,
-  data: { username: string; userId?: string; bombEnabled: boolean; turnTimerSeconds: number; botCount?: number },
+  data: { username: string; bombEnabled: boolean; turnTimerSeconds: number; botCount?: number },
   callback: Function,
   io: Server,
   ns: PoopyheadNamespace
 ) {
   try {
-    const isGuest = !data.userId;
+    const userId: string | null = socket.data.userId ?? null;
+    const isGuest = !userId;
     let lobby = createLobby(
-      data.userId || 'guest_' + socket.id,
+      userId || 'guest_' + socket.id,
       data.username,
       isGuest,
       socket.id,
@@ -432,7 +433,7 @@ function handleCreateLobby(
 
 function handleJoinLobby(
   socket: Socket,
-  data: { code: string; username: string; userId?: string },
+  data: { code: string; username: string },
   callback: Function,
   io: Server,
   ns: PoopyheadNamespace
@@ -441,10 +442,11 @@ function handleJoinLobby(
     const lobby = ns.lobbies.get(data.code);
     if (!lobby) return callback({ success: false, reason: 'LOBBY_NOT_FOUND' });
 
-    const isGuest = !data.userId;
+    const userId: string | null = socket.data.userId ?? null;
+    const isGuest = !userId;
     const result = addPlayerToLobby({
       lobby,
-      userId: data.userId,
+      userId: userId ?? undefined,
       username: data.username,
       isGuest,
       socketId: socket.id,

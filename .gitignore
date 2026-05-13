@@ -1,3 +1,8 @@
+# environment variables (never commit secrets)
+.env
+.env.local
+.env.*.local
+
 # planning files
 plan.txt
 planning.txt

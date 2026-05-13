@@ -8,11 +8,14 @@
  * - NODE_ENV: 'development' or 'production'
  */
 
+import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import { setupSocketHandlers, PoopyheadNamespace } from './sockets/gameHandlers';
+import { supabaseAdmin } from './supabase/client';
+import { authMiddleware } from './sockets/authMiddleware';
 
 const app = express();
 const httpServer = createServer(app);
@@ -38,8 +41,17 @@ const gameNamespace: PoopyheadNamespace = {
 };
 
 // API Routes (for future use)
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/health', async (req, res) => {
+  let db: 'ok' | 'error' = 'error';
+  try {
+    const { error } = await supabaseAdmin.from('profiles').select('id').limit(1);
+    if (error) console.error('[Health] DB ping error:', error);
+    if (!error) db = 'ok';
+  } catch (e) {
+    console.error('[Health] DB ping threw:', e);
+    db = 'error';
+  }
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), db });
 });
 
 app.get('/stats', (req, res) => {
@@ -51,6 +63,7 @@ app.get('/stats', (req, res) => {
 });
 
 // Socket.io event handlers
+io.use(authMiddleware);
 setupSocketHandlers(io, gameNamespace);
 
 // Error handling

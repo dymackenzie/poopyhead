@@ -16,7 +16,7 @@ let socket: Socket | null = null;
 /**
  * Initialize socket connection.
  */
-export function initSocket(callbacks: {
+export function initSocket(token: string | null, callbacks: {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onLobbyCreated?: (data: LobbyResponse) => void;
@@ -29,7 +29,9 @@ export function initSocket(callbacks: {
   onPilePicked?: (data: unknown) => void;
   onDebugStateSync?: (data: unknown) => void;
 }): Socket {
+  if (socket) return socket;
   socket = io(SOCKET_URL, {
+    auth: { token },
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
