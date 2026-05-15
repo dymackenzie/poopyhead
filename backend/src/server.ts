@@ -13,8 +13,7 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+import { join } from 'path';
 import { setupSocketHandlers, PoopyheadNamespace } from './sockets/gameHandlers';
 import { supabaseAdmin } from './supabase/client';
 import { deleteStaleGames } from './services/GameStateRepository';
@@ -22,8 +21,6 @@ import { authMiddleware } from './sockets/authMiddleware';
 import gamesRouter from './api/gamesRouter';
 import pushRouter from './api/pushRouter';
 import leaderboardRouter from './api/leaderboardRouter';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_DIST = join(__dirname, '../../frontend/dist');
 
 const app = express();
