@@ -29,20 +29,7 @@ export function EndgameScreen(): React.ReactElement {
   };
 
   const handleExit = (): void => {
-    useGameStore.setState({
-      gameStatus: 'lobby',
-      lobbyCode: undefined,
-      gameId: undefined,
-      loserId: undefined,
-      loserTableCards: [],
-      loserBlindCards: [],
-      hand: [],
-      tableCards: [],
-      blindCards: [],
-      playPile: [],
-      lobbyPlayers: [],
-      canStartGame: false,
-    });
+    useGameStore.getState().resetGameSession();
   };
 
   if (gameStatus === 'rematch') {

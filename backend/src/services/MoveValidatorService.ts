@@ -8,6 +8,7 @@
  */
 
 import { Card } from './DeckService';
+import { pileEffectiveTop } from './pileUtils';
 
 export interface ValidationContext {
   playerId: string;
@@ -165,15 +166,11 @@ function validatePileLegality(
 
   // RULE_CANON: rank 3 is "invisible" — look through consecutive 3s on top to find
   // the effective card that must be beaten.
-  let effectiveTopIndex = currentPile.length - 1;
-  while (effectiveTopIndex >= 0 && currentPile[effectiveTopIndex].specialType === 'invisible') {
-    effectiveTopIndex--;
-  }
+  const topCard = pileEffectiveTop(currentPile);
   // If the entire pile is 3s, treat it as an empty pile (any card is legal)
-  if (effectiveTopIndex < 0) {
+  if (!topCard) {
     return { valid: true };
   }
-  const topCard = currentPile[effectiveTopIndex];
 
   // Check each card being played
   for (const card of cardsToPlay) {

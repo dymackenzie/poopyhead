@@ -13,6 +13,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store';
 import { playCards, swapCards, pickupPile, debugAutoPlay } from '../socketClient';
+import { pileEffectiveTop } from '../lib/pileUtils';
 import type { GameState, BlindReveal } from '../store';
 import Card from '../components/Card';
 import PileDisplay from '../components/PileDisplay';
@@ -120,13 +121,8 @@ function isCardPlayable(
   if (isWildcard) return true;
 
   // Empty pile (or pile consisting entirely of invisible 3s): any card is playable
-  let effectiveTopIndex = pile.length - 1;
-  while (effectiveTopIndex >= 0 && pile[effectiveTopIndex].rank === '3') {
-    effectiveTopIndex--;
-  }
-  if (effectiveTopIndex < 0) return true;
-
-  const topCard = pile[effectiveTopIndex];
+  const topCard = pileEffectiveTop(pile);
+  if (!topCard) return true;
 
   // 7-or-under constraint: must play 7 or lower
   if (constraints.sevenOrUnder) {
@@ -422,9 +418,7 @@ export function GameScreen(): React.ReactElement {
 
   const opponents = lobbyPlayers.filter((p: LobbyPlayer) => p.id !== currentPlayerId);
   const isSpectator = phase === 'playing' && hand.length === 0 && tableCards.length === 0 && blindCards.length === 0;
-  let topPileIdx = playPile.length - 1;
-  while (topPileIdx >= 0 && playPile[topPileIdx].rank === '3') topPileIdx--;
-  const topPileCard = topPileIdx >= 0 ? playPile[topPileIdx] : null;
+  const topPileCard = pileEffectiveTop(playPile);
   const isYourTurn = !!currentPlayerId && currentTurnPlayerId === currentPlayerId;
 
   /* Issue 3 — determine pickup animation direction based on who picked up */
@@ -530,31 +524,7 @@ export function GameScreen(): React.ReactElement {
 
   const handleLeaveGame = (): void => {
     setShowLeaveConfirm(false);
-    useGameStore.setState({
-      gameStatus: 'lobby',
-      gameId: undefined,
-      lobbyCode: undefined,
-      phase: 'swapping',
-      hand: [],
-      tableCards: [],
-      blindCards: [],
-      playPile: [],
-      lobbyPlayers: [],
-      currentTurnPlayerId: undefined,
-      currentPlayerUsername: undefined,
-      deckCount: 0,
-      activeConstraints: { sevenOrUnder: false, skipCount: 0 },
-      blindReveal: null,
-      opponentBlindReveal: null,
-      pickupAnimation: false,
-      pickupPlayerId: null,
-      bombAnimation: false,
-      cardPlayAnimation: null,
-      loserId: undefined,
-      loserTableCards: [],
-      loserBlindCards: [],
-      activeGames: [],
-    });
+    useGameStore.getState().resetGameSession();
   };
 
   /* Fix G — auto-pickup when no playable cards on your turn */

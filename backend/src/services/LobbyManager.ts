@@ -7,6 +7,7 @@
 
 import { v4 as uuid } from 'uuid';
 import { pickAIName } from './AIPlayerService.js';
+import { DEFAULT_GAME_MODE } from './constants.js';
 
 export interface Lobby {
   id: string;
@@ -80,7 +81,7 @@ export function createLobby(
       },
     ],
     status: 'waiting',
-    settings: { ...settings, mode: settings.mode ?? 'async' },
+    settings: { ...settings, mode: settings.mode ?? DEFAULT_GAME_MODE },
     maxPlayers: 5,
   };
 }
@@ -171,32 +172,6 @@ export function canStartGame(lobby: Lobby): boolean {
     lobby.players.length >= 2 &&
     lobby.players.every(p => p.ready)
   );
-}
-
-/**
- * Removes player from lobby.
- */
-export function removePlayerFromLobby(lobby: Lobby, playerId: string): Lobby {
-  const updatedPlayers = lobby.players.filter(p => p.id !== playerId);
-  
-  // If creator left, reassign to next player or end lobby
-  let newCreatedBy = lobby.createdBy;
-  if (lobby.createdBy === updatedPlayers.find(p => p.id)?.userId) {
-    newCreatedBy = updatedPlayers[0]?.userId || 'system';
-  }
-  
-  return {
-    ...lobby,
-    createdBy: newCreatedBy,
-    players: updatedPlayers,
-  };
-}
-
-/**
- * Checks if lobby is empty (all players left).
- */
-export function isLobbyEmpty(lobby: Lobby): boolean {
-  return lobby.players.length === 0;
 }
 
 /**

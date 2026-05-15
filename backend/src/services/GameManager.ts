@@ -7,10 +7,12 @@
 
 import { v4 as uuid } from 'uuid';
 import { Card } from './DeckService';
-import { createDeck, drawCards } from './DeckService';
+import { createDeck } from './DeckService';
 import { dealGame } from './DealService';
 import { validateMove } from './MoveValidatorService';
 import { resolveTurn, advancePlayerIndex } from './TurnResolutionService';
+import { DEFAULT_GAME_MODE } from './constants';
+import { pileEffectiveTop } from './pileUtils';
 
 function isPlayerActive(player: GamePlayer): boolean {
   return player.hand.length > 0 || player.tableVisible.length > 0 || player.tableBlind.length > 0;
@@ -113,7 +115,7 @@ export function createGame(input: CreateGameInput): GameInstance {
   const gameInstance: GameInstance = {
     id: uuid(),
     lobbyCode: input.lobbyCode,
-    mode: input.mode ?? 'async',
+    mode: input.mode ?? DEFAULT_GAME_MODE,
     players: input.players.map((p, i) => ({
       id: p.id,
       userId: p.userId,
@@ -237,13 +239,9 @@ export function processPlayCardAction(input: PlayCardActionInput): PlayCardActio
     const blindCard = cardsToPlay[0];
     let blindFails = false;
 
-    let effectiveTopIndex = game.playPile.length - 1;
-    while (effectiveTopIndex >= 0 && game.playPile[effectiveTopIndex].specialType === 'invisible') {
-      effectiveTopIndex--;
-    }
-
-    if (effectiveTopIndex >= 0) {
-      const topCard = game.playPile[effectiveTopIndex];
+    const effectiveTop = pileEffectiveTop(game.playPile);
+    if (effectiveTop) {
+      const topCard = effectiveTop;
       const isWildcard = blindCard.isWildcard && (blindCard.specialType !== 'bomb' || game.bombEnabled);
       if (!isWildcard) {
         blindFails = game.activeConstraints.sevenOrUnder

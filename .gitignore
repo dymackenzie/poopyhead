@@ -10,6 +10,10 @@ planning/
 
 node_modules/
 
+# build output
+dist/
+backend/dist/
+
 # claude
 .claude/
 CLAUDE.md

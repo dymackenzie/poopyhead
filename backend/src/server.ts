@@ -42,6 +42,7 @@ const gameNamespace: PoopyheadNamespace = {
   socketToPlayer: new Map(),
   sessions: new Map(),
   pendingBotTakeovers: new Map(),
+  pendingAITurns: new Map(),
 };
 
 // API Routes

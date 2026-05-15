@@ -135,34 +135,3 @@ export function shuffle(cards: Card[]): Card[] {
   return deck;
 }
 
-/**
- * Draws N cards from deck.
- * Mutates deck array by removing cards.
- * Returns cards in order drawn.
- */
-export function drawCards(deck: Card[], count: number): Card[] {
-  if (deck.length < count) {
-    throw new Error(`Cannot draw ${count} cards from deck with ${deck.length} cards`);
-  }
-  
-  return deck.splice(0, count);
-}
-
-/**
- * Counts occurrences of specific rank in hand.
- * Used for first-player tiebreaker (most 4s in starting hand).
- */
-export function countRankInHand(hand: Card[], rank: Rank): number {
-  return hand.filter(c => c.rank === rank).length;
-}
-
-/**
- * Card comparison for beat validation.
- * Returns true if card beats previous (value >= previous value).
- * Special cards (wildcards) have no inherent beat value.
- */
-export function cardBeats(card: Card, previousCard: Card): boolean {
-  if (card.isWildcard) return true;
-  if (previousCard.isWildcard) return true; // Cannot compare to wildcard
-  return card.value >= previousCard.value;
-}

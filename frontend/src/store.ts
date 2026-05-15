@@ -5,7 +5,7 @@
  */
 
 import { create } from 'zustand';
-import type { ActiveGameSummary, GameCard, GameStatePatch, LobbyPlayer, LobbySettings } from './types/game';
+import type { ActiveGameSummary, GameCard, GameStatePatch, LobbyPlayer } from './types/game';
 
 export type GamePlayer = LobbyPlayer;
 
@@ -80,16 +80,9 @@ export interface GameState {
   loserBlindCards: GameCard[];
 
   // Actions
-  connect: () => void;
-  disconnect: () => void;
-  createLobby: (username: string, settings: LobbySettings) => void;
-  joinLobby: (code: string, username: string) => void;
-  setReady: (ready: boolean) => void;
-  startGame: (direction: 'clockwise' | 'counterclockwise') => void;
-  playCards: (cardIds: string[]) => void;
   updateGameState: (state: Partial<GameState> | GameStatePatch) => void;
-  updatePlayableCards: (cardIds: string[]) => void;
-  setGameStatus: (status: GameStatus) => void;
+  /** Reset all in-game state and return to the lobby screen. */
+  resetGameSession: () => void;
   setAuth: (user: { id: string; isAnonymous: boolean } | null, token: string | null) => void;
   setActiveGames: (games: ActiveGameSummary[]) => void;
   setPushEnabled: (enabled: boolean) => void;
@@ -127,40 +120,38 @@ export const useGameStore = create<GameState>((set) => ({
   loserBlindCards: [],
 
   // Actions
-  connect: () => set({ connected: true }),
-  disconnect: () => set({ connected: false }),
-
-  createLobby: (_username: string, _settings: LobbySettings) => {
-    set({ lobbyCode: 'ABC123' }); // Placeholder
-  },
-
-  joinLobby: (code: string, _username: string) => {
-    set({ lobbyCode: code });
-  },
-
-  setReady: (_ready: boolean) => {
-    // Emit to server
-  },
-
-  startGame: (_direction: 'clockwise' | 'counterclockwise') => {
-    set({ gameStatus: 'playing' });
-  },
-
-  playCards: (_cardIds: string[]) => {
-    // Emit to server
-  },
-
   updateGameState: (state: Partial<GameState> | GameStatePatch) => {
     set(state);
   },
 
-  updatePlayableCards: (cardIds: string[]) => {
-    set({ playableCards: cardIds });
-  },
-
-  setGameStatus: (status: GameStatus) => {
-    set({ gameStatus: status });
-  },
+  resetGameSession: () => set({
+    gameStatus: 'lobby',
+    gameId: undefined,
+    lobbyCode: undefined,
+    phase: 'swapping',
+    hand: [],
+    tableCards: [],
+    blindCards: [],
+    playPile: [],
+    lobbyPlayers: [],
+    canStartGame: false,
+    currentPlayerId: undefined,
+    currentTurnPlayerId: undefined,
+    currentPlayerUsername: undefined,
+    deckCount: 0,
+    activeConstraints: { sevenOrUnder: false, skipCount: 0 },
+    blindReveal: null,
+    opponentBlindReveal: null,
+    pendingBlindSlotIndex: null,
+    pickupAnimation: false,
+    pickupPlayerId: null,
+    bombAnimation: false,
+    cardPlayAnimation: null,
+    loserId: undefined,
+    loserTableCards: [],
+    loserBlindCards: [],
+    activeGames: [],
+  }),
 
   setAuth: (user, token) => set({ authUser: user, authToken: token }),
   setActiveGames: (games) => set({ activeGames: games }),

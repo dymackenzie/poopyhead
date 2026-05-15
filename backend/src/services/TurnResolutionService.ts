@@ -171,20 +171,3 @@ export function advancePlayerIndex(
   return newIndex < 0 ? newIndex + playerCount : newIndex;
 }
 
-/**
- * Determines if a player can play any card (for bomb extra-turn).
- */
-export function canPlayAnyCard(pile: Card[]): boolean {
-  return pile.length === 0;
-}
-
-/**
- * After bomb resolution, player must replenish hand before extra turn.
- * This function calculates how many cards player needs to draw.
- */
-export function calculateReplenishmentNeeded(
-  playerHand: Card[],
-  expectedHandSize: number
-): number {
-  return Math.max(0, expectedHandSize - playerHand.length);
-}

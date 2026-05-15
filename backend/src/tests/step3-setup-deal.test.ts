@@ -12,8 +12,6 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateDeckCount,
   createDeck,
-  drawCards,
-  countRankInHand,
   shuffle,
 } from '../services/DeckService';
 import {
