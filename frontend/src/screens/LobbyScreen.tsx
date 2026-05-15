@@ -367,7 +367,7 @@ export function LobbyScreen(): React.ReactElement {
                 placeholder="something embarrassing"
                 autoFocus
               />
-              <label className="lobby-checkbox">
+              {/* <label className="lobby-checkbox">
                 <input
                   type="checkbox"
                   checked={bombEnabled}
@@ -375,7 +375,7 @@ export function LobbyScreen(): React.ReactElement {
                 />
                 <span className="lobby-checkbox-track" />
                 <span className="lobby-checkbox-label">Enable 10-Bomb rule</span>
-              </label>
+              </label> */}
               <div className="lobby-bot-row">
                 <span className="lobby-bot-label">AI Players</span>
                 <div className="lobby-bot-stepper">
@@ -394,7 +394,7 @@ export function LobbyScreen(): React.ReactElement {
                   >+</button>
                 </div>
               </div>
-              <label className="lobby-checkbox">
+              {/* <label className="lobby-checkbox">
                 <input
                   type="checkbox"
                   checked={gameMode === 'live'}
@@ -402,7 +402,7 @@ export function LobbyScreen(): React.ReactElement {
                 />
                 <span className="lobby-checkbox-track" />
                 <span className="lobby-checkbox-label">Live mode (bots take over on disconnect)</span>
-              </label>
+              </label> */}
             </div>
             {error && <p className="lobby-error">{error}</p>}
             <Button variant="primary" onClick={handleCreateLobby} disabled={loading}>
