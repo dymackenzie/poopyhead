@@ -9,7 +9,7 @@
 import { io, Socket } from 'socket.io-client';
 import type { GameCard, GameStatePatch, LobbyResponse, LobbySettings, PlayerJoinedPayload, PlayerReadyPayload, ReadyResponse, ResumeGameResponse } from './types/game';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const SOCKET_URL = import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:3001' : '');
 
 let socket: Socket | null = null;
 

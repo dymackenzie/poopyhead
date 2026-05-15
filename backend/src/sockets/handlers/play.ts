@@ -31,6 +31,9 @@ export async function handleSwapCards(
   ns: PoopyheadNamespace
 ) {
   try {
+    const senderPlayerId = ns.socketToPlayer.get(socket.id);
+    if (senderPlayerId !== data.playerId) return callback({ success: false, reason: 'UNAUTHORIZED' });
+
     const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
 
@@ -81,6 +84,9 @@ export async function handlePlayCard(
   ns: PoopyheadNamespace
 ) {
   try {
+    const senderPlayerId = ns.socketToPlayer.get(socket.id);
+    if (senderPlayerId !== data.playerId) return callback({ success: false, reason: 'UNAUTHORIZED' });
+
     const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
 
@@ -118,6 +124,9 @@ export async function handlePickupPile(
   ns: PoopyheadNamespace
 ) {
   try {
+    const senderPlayerId = ns.socketToPlayer.get(socket.id);
+    if (senderPlayerId !== data.playerId) return callback({ success: false, reason: 'UNAUTHORIZED' });
+
     const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });
 
@@ -173,6 +182,9 @@ export async function handleDebugAutoPlay(
   io: Server,
   ns: PoopyheadNamespace
 ) {
+  if (process.env.NODE_ENV === 'production') {
+    return callback({ success: false, reason: 'NOT_AVAILABLE' });
+  }
   try {
     const game = await getGame(data.gameId, ns);
     if (!game) return callback({ success: false, reason: 'GAME_NOT_FOUND' });

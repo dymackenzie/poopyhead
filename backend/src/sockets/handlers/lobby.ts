@@ -113,6 +113,9 @@ export function handleSetReady(
     const lobby = ns.lobbies.get(data.code);
     if (!lobby) return callback({ success: false, reason: 'LOBBY_NOT_FOUND' });
 
+    const senderPlayerId = ns.socketToPlayer.get(socket.id);
+    if (senderPlayerId !== data.playerId) return callback({ success: false, reason: 'UNAUTHORIZED' });
+
     const updatedLobby = setPlayerReady(lobby, data.playerId, data.ready);
     ns.lobbies.set(data.code, updatedLobby);
 
@@ -204,6 +207,11 @@ export async function handleRematch(
   try {
     const lobby = ns.lobbies.get(data.code);
     if (!lobby) return callback({ success: false, reason: 'LOBBY_NOT_FOUND' });
+
+    const senderPlayerId = ns.socketToPlayer.get(socket.id);
+    if (!senderPlayerId || !lobby.players.find(p => p.id === senderPlayerId)) {
+      return callback({ success: false, reason: 'NOT_IN_LOBBY' });
+    }
 
     const existingGame = lobby.currentGameId ? await getGame(lobby.currentGameId, ns) : null;
     if (existingGame && existingGame.status !== 'ended') {

@@ -13,6 +13,8 @@ import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { setupSocketHandlers, PoopyheadNamespace } from './sockets/gameHandlers';
 import { supabaseAdmin } from './supabase/client';
 import { deleteStaleGames } from './services/GameStateRepository';
@@ -21,17 +23,22 @@ import gamesRouter from './api/gamesRouter';
 import pushRouter from './api/pushRouter';
 import leaderboardRouter from './api/leaderboardRouter';
 
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const FRONTEND_DIST = join(__dirname, '../../frontend/dist');
+
 const app = express();
 const httpServer = createServer(app);
+const CORS_ORIGIN = process.env.CORS_ORIGIN ?? '*';
+
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: '*', // TODO: Restrict in production
+    origin: CORS_ORIGIN,
     methods: ['GET', 'POST'],
   },
 });
 
 // Middleware
-app.use(cors());
+app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
 
 // Global namespace for game state management
@@ -74,6 +81,12 @@ app.get('/stats', (req, res) => {
 // Socket.io event handlers
 io.use(authMiddleware);
 setupSocketHandlers(io, gameNamespace);
+
+// Serve frontend in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(FRONTEND_DIST));
+  app.get('*', (_req, res) => res.sendFile(join(FRONTEND_DIST, 'index.html')));
+}
 
 // Error handling
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
