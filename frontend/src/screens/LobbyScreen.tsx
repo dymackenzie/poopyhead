@@ -36,6 +36,7 @@ export function LobbyScreen(): React.ReactElement {
   const [gameMode, setGameMode] = useState<'live' | 'async'>('async');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [copyFeedback, setCopyFeedback] = useState(false);
 
   const lobbyPlayers = useGameStore((state) => state.lobbyPlayers);
   const currentLobbyCode = useGameStore((state) => state.lobbyCode);
@@ -46,6 +47,7 @@ export function LobbyScreen(): React.ReactElement {
   const authToken = useGameStore((state) => state.authToken);
   const activeGames = useGameStore((state) => state.activeGames);
   const setActiveGames = useGameStore((state) => state.setActiveGames);
+  const currentPlayerAvatar = useGameStore((s) => s.currentPlayerAvatar);
 
   useEffect(() => {
     if (mode !== 'home' || !authToken) return;
@@ -67,7 +69,7 @@ export function LobbyScreen(): React.ReactElement {
     setLoading(true);
     setError('');
     try {
-      const result = await createLobby(username.trim(), { bombEnabled, turnTimerSeconds: 60, botCount, mode: gameMode });
+      const result = await createLobby(username.trim(), { bombEnabled, turnTimerSeconds: 60, botCount, mode: gameMode }, currentPlayerAvatar);
       if (result.success) {
         useGameStore.setState({
           lobbyCode: result.lobby?.code,
@@ -90,7 +92,7 @@ export function LobbyScreen(): React.ReactElement {
     setLoading(true);
     setError('');
     try {
-      const result = await joinLobby(lobbyCode.toUpperCase(), username.trim());
+      const result = await joinLobby(lobbyCode.toUpperCase(), username.trim(), currentPlayerAvatar);
       if (result.success) {
         useGameStore.setState({
           lobbyCode: result.lobby?.code,
@@ -188,7 +190,25 @@ export function LobbyScreen(): React.ReactElement {
             </div>
             <div className="lobby-code-block">
               <span className="lobby-code-label">Lobby Code</span>
-              <span className="lobby-code-value">{currentLobbyCode}</span>
+              <div className="lobby-code-row">
+                <span className="lobby-code-value">{currentLobbyCode}</span>
+                <button
+                  type="button"
+                  className="lobby-code-copy"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(currentLobbyCode!);
+                      setCopyFeedback(true);
+                      setTimeout(() => setCopyFeedback(false), 1500);
+                    } catch {
+                      // ignore — older browsers
+                    }
+                  }}
+                  aria-label="Copy lobby code"
+                >
+                  {copyFeedback ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
               <span className="lobby-code-hint">Share this with friends to join</span>
             </div>
           </div>
@@ -248,9 +268,9 @@ export function LobbyScreen(): React.ReactElement {
           <button
             className="lobby-account-btn"
             onClick={() => setMode('account')}
-            aria-label="Account settings"
+            aria-label="Account and sign in"
           >
-            &#9881;
+            <span className="lobby-account-icon" aria-hidden="true">&#128100;</span>
           </button>
         )}
 
@@ -309,11 +329,18 @@ export function LobbyScreen(): React.ReactElement {
                     onClick={() => handleResumeGame(g.id)}
                     disabled={loading}
                   >
-                    <span className="lobby-active-game-code">{g.lobby_code}</span>
-                    <span className={`lobby-active-game-status ${g.current_turn_user_id === authUser?.id ? 'your-turn' : ''}`}>
-                      {g.current_turn_user_id === authUser?.id ? 'Your turn' : 'Waiting...'}
+                    <span className="lobby-active-game-top">
+                      <span className="lobby-active-game-code">{g.lobby_code}</span>
+                      <span className={`lobby-active-game-status ${g.current_turn_user_id === authUser?.id ? 'your-turn' : ''}`}>
+                        {g.current_turn_user_id === authUser?.id ? 'Your turn' : 'Waiting...'}
+                      </span>
+                      <span className="lobby-active-game-time">{timeAgo(g.last_action_at)}</span>
                     </span>
-                    <span className="lobby-active-game-time">{timeAgo(g.last_action_at)}</span>
+                    {g.players && g.players.length > 0 && (
+                      <span className="lobby-active-game-players">
+                        with {g.players.join(', ')}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

@@ -12,7 +12,7 @@
 
 import { Socket, Server } from 'socket.io';
 import { Lobby } from '../services/LobbyManager.js';
-import { saveGame, loadGame } from '../services/GameStateRepository.js';
+import { saveGame, loadGame, deleteGame } from '../services/GameStateRepository.js';
 import { supabaseAdmin } from '../supabase/client.js';
 import { notifyTurn } from '../services/PushService.js';
 import { GameInstance, PlayCardActionOutput } from '../services/GameManager.js';
@@ -157,6 +157,8 @@ function broadcastPlayResult(
       loserTableCards: loserPlayer?.tableVisible ?? [],
       loserBlindCards: loserPlayer?.tableBlind ?? [],
     });
+    deleteGame(finalGame.id).catch(e => console.error('[Cleanup] post-end delete failed', e));
+    ns.games.delete(finalGame.id);
     return;
   }
 
@@ -329,6 +331,8 @@ function executeAndBroadcastAITurn(game: GameInstance, io: Server, ns: Poopyhead
       loserTableCards: loserPlayer?.tableVisible ?? [],
       loserBlindCards: loserPlayer?.tableBlind ?? [],
     });
+    deleteGame(finalGame.id).catch(e => console.error('[Cleanup] post-end AI delete failed', e));
+    ns.games.delete(finalGame.id);
     return;
   }
 
@@ -458,7 +462,7 @@ function processBotSwaps(game: GameInstance, io: Server, ns: PoopyheadNamespace)
 
 function handleCreateLobby(
   socket: Socket,
-  data: { username: string; bombEnabled: boolean; turnTimerSeconds: number; botCount?: number; mode?: 'live' | 'async' },
+  data: { username: string; bombEnabled: boolean; turnTimerSeconds: number; botCount?: number; mode?: 'live' | 'async'; avatar?: string },
   callback: Function,
   io: Server,
   ns: PoopyheadNamespace
@@ -471,7 +475,8 @@ function handleCreateLobby(
       data.username,
       isGuest,
       socket.id,
-      { bombEnabled: data.bombEnabled, turnTimerSeconds: data.turnTimerSeconds, mode: data.mode }
+      { bombEnabled: data.bombEnabled, turnTimerSeconds: data.turnTimerSeconds, mode: data.mode },
+      data.avatar
     );
 
     if (data.botCount && data.botCount > 0) {
@@ -499,7 +504,7 @@ function handleCreateLobby(
 
 function handleJoinLobby(
   socket: Socket,
-  data: { code: string; username: string },
+  data: { code: string; username: string; avatar?: string },
   callback: Function,
   io: Server,
   ns: PoopyheadNamespace
@@ -516,6 +521,7 @@ function handleJoinLobby(
       username: data.username,
       isGuest,
       socketId: socket.id,
+      avatar: data.avatar,
     });
 
     if (!result.success) return callback({ success: false, reason: result.reason });

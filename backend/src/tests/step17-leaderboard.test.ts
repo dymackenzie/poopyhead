@@ -78,6 +78,7 @@ describe('LeaderboardService.getLeaderboardFor', () => {
       userId: 'abc',
       displayName: 'Bob',
       isAnonymous: false,
+      avatar: null,
       gamesPlayed: 5,
       wins: 3,
       poopyheadCount: 2,

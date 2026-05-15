@@ -30,6 +30,7 @@ export interface LobbyPlayer {
   username: string;
   isGuest: boolean;
   isBot?: boolean;
+  avatar?: string;
   joinedAt: Date;
   ready: boolean;
   socketId: string;
@@ -56,10 +57,11 @@ export function createLobby(
   username: string,
   isGuest: boolean,
   socketId: string,
-  settings: { bombEnabled: boolean; turnTimerSeconds: number; mode?: 'live' | 'async' }
+  settings: { bombEnabled: boolean; turnTimerSeconds: number; mode?: 'live' | 'async' },
+  avatar?: string
 ): Lobby {
   const playerId = uuid();
-  
+
   return {
     id: uuid(),
     code: generateLobbyCode(),
@@ -71,6 +73,7 @@ export function createLobby(
         userId: isGuest ? undefined : createdBy,
         username,
         isGuest,
+        avatar,
         joinedAt: new Date(),
         ready: false,
         socketId,
@@ -91,6 +94,7 @@ export interface AddPlayerInput {
   username: string;
   isGuest: boolean;
   socketId: string;
+  avatar?: string;
 }
 
 export interface AddPlayerOutput {
@@ -132,6 +136,7 @@ export function addPlayerToLobby(input: AddPlayerInput): AddPlayerOutput {
         userId: input.isGuest ? undefined : input.userId,
         username: input.username,
         isGuest: input.isGuest,
+        avatar: input.avatar,
         joinedAt: new Date(),
         ready: false,
         socketId: input.socketId,

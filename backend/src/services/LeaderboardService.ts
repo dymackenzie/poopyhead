@@ -4,6 +4,7 @@ export interface LeaderboardRow {
   userId: string;
   displayName: string;
   isAnonymous: boolean;
+  avatar?: string | null;
   gamesPlayed: number;
   wins: number;
   poopyheadCount: number;
@@ -19,10 +20,13 @@ export async function getLeaderboardFor(userId: string): Promise<LeaderboardRow[
     console.error('[Leaderboard] rpc failed', error);
     return [];
   }
+  // NOTE: requires get_played_with_leaderboard RPC to return an `avatar` text column
+  // joined from public.profiles.avatar. Update the SQL function in Supabase dashboard if missing.
   return (data ?? []).map((r: any) => ({
     userId: r.user_id,
     displayName: r.display_name,
     isAnonymous: r.is_anonymous,
+    avatar: r.avatar ?? null,
     gamesPlayed: r.games_played,
     wins: r.wins,
     poopyheadCount: r.poopyhead_count,

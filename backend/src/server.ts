@@ -15,6 +15,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
 import { setupSocketHandlers, PoopyheadNamespace } from './sockets/gameHandlers';
 import { supabaseAdmin } from './supabase/client';
+import { deleteStaleGames } from './services/GameStateRepository';
 import { authMiddleware } from './sockets/authMiddleware';
 import gamesRouter from './api/gamesRouter';
 import pushRouter from './api/pushRouter';
@@ -82,14 +83,21 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Start server
 const PORT = process.env.PORT || 3001;
 
+let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
 httpServer.listen(PORT, () => {
   console.log(`Poopyhead server listening on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+  deleteStaleGames().catch(e => console.error('[Cleanup] startup sweep failed', e));
+  cleanupInterval = setInterval(() => {
+    deleteStaleGames().catch(e => console.error('[Cleanup] periodic sweep failed', e));
+  }, 60 * 60 * 1000);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down...');
+  if (cleanupInterval) clearInterval(cleanupInterval);
   httpServer.close(() => {
     console.log('Server closed');
     process.exit(0);

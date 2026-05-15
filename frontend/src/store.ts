@@ -21,6 +21,7 @@ export interface GameState {
   // Auth
   authUser: { id: string; isAnonymous: boolean } | null;
   authToken: string | null;
+  currentPlayerAvatar?: string;
 
   // Active games (for resume flow)
   activeGames: ActiveGameSummary[];

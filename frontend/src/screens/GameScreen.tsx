@@ -16,6 +16,7 @@ import { playCards, swapCards, pickupPile, debugAutoPlay } from '../socketClient
 import type { GameState, BlindReveal } from '../store';
 import Card from '../components/Card';
 import PileDisplay from '../components/PileDisplay';
+import Avatar from '../components/Avatar';
 import './GameScreen.css';
 import type { GameCard, LobbyPlayer } from '../types/game';
 
@@ -45,7 +46,7 @@ const PICKUP_ANIM_MS = 800;
 const BOMB_ANIM_MS = 600;
 
 // Card play animation lifetime
-const CARD_PLAY_ANIM_MS = 450;
+const CARD_PLAY_ANIM_MS = 250;
 
 // Issue 7 — hand overflow thresholds
 const HAND_COMPACT_THRESHOLD = 8;   // groups before shrinking kicks in
@@ -383,9 +384,11 @@ export function GameScreen(): React.ReactElement {
   const pickupPlayerId        = useGameStore((s) => s.pickupPlayerId);
   const bombAnimation         = useGameStore((s) => s.bombAnimation);
   const cardPlayAnimation     = useGameStore((s) => s.cardPlayAnimation);
+  const currentPlayerAvatar   = useGameStore((s) => s.currentPlayerAvatar);
 
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
   const [showPileCounts, setShowPileCounts] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const pileCountsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Ref to prevent double-firing of auto-pickup
   const autoPickupPendingRef = useRef(false);
@@ -525,6 +528,35 @@ export function GameScreen(): React.ReactElement {
     setSelectedCards([]);
   };
 
+  const handleLeaveGame = (): void => {
+    setShowLeaveConfirm(false);
+    useGameStore.setState({
+      gameStatus: 'lobby',
+      gameId: undefined,
+      lobbyCode: undefined,
+      phase: 'swapping',
+      hand: [],
+      tableCards: [],
+      blindCards: [],
+      playPile: [],
+      lobbyPlayers: [],
+      currentTurnPlayerId: undefined,
+      currentPlayerUsername: undefined,
+      deckCount: 0,
+      activeConstraints: { sevenOrUnder: false, skipCount: 0 },
+      blindReveal: null,
+      opponentBlindReveal: null,
+      pickupAnimation: false,
+      pickupPlayerId: null,
+      bombAnimation: false,
+      cardPlayAnimation: null,
+      loserId: undefined,
+      loserTableCards: [],
+      loserBlindCards: [],
+      activeGames: [],
+    });
+  };
+
   /* Fix G — auto-pickup when no playable cards on your turn */
   useEffect(() => {
     if (!isYourTurn || !gameId || !currentPlayerId) {
@@ -619,6 +651,30 @@ export function GameScreen(): React.ReactElement {
   return (
     <div className="game-screen">
 
+      {/* ── Menu Button ──────────────────────────── */}
+      <button
+        type="button"
+        className="gs-menu-btn"
+        onClick={() => setShowLeaveConfirm(true)}
+        aria-label="Open game menu"
+      >
+        <span aria-hidden="true">&#9776;</span> Menu
+      </button>
+
+      {/* ── Leave Confirmation ───────────────────── */}
+      {showLeaveConfirm && (
+        <div className="gs-leave-overlay" role="dialog" aria-label="Leave game">
+          <div className="gs-leave-card">
+            <p className="gs-leave-title">Leave game?</p>
+            <p className="gs-leave-body">Other players will continue without you.</p>
+            <div className="gs-leave-actions">
+              <button className="gs-leave-btn gs-leave-btn--secondary" onClick={() => setShowLeaveConfirm(false)}>Cancel</button>
+              <button className="gs-leave-btn gs-leave-btn--primary" onClick={handleLeaveGame}>Leave</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Pile Counts Overlay ───────────────────── */}
       {showPileCounts && (
         <PileCountsOverlay
@@ -695,9 +751,9 @@ export function GameScreen(): React.ReactElement {
                 )}
 
                 <div className={`gs-opponent-label ${isActive ? 'gs-opponent-label--active' : ''}`}>
-                  {isActive && <span className="gs-active-dot" aria-hidden="true" />}
+                  <Avatar slug={player.avatar} size={isCompactOpponents ? 24 : 32} className="gs-opponent-avatar" alt="" />
                   <span className="gs-opponent-name">{player.username}</span>
-                  <span className="gs-opponent-count">{handCount ?? '?'}</span>
+                  <span className="gs-opponent-count" aria-label={`${handCount ?? '?'} cards`}>{handCount ?? '?'}</span>
                 </div>
               </div>
             );
@@ -709,12 +765,14 @@ export function GameScreen(): React.ReactElement {
       <div className="gs-board" style={{ position: 'relative' }}>
         <div className="gs-center">
           {/* Fix A — renamed to "Play Pile" */}
-          <PileDisplay
-            title="Play Pile"
-            count={playPile.length}
-            topCard={topPileCard}
-            onClick={handleShowPileCounts}
-          />
+          <div className={`gs-pile-wrap${bombAnimation ? ' gs-pile--bomb' : ''}`}>
+            <PileDisplay
+              title="Play Pile"
+              count={playPile.length}
+              topCard={topPileCard}
+              onClick={handleShowPileCounts}
+            />
+          </div>
           {/* Fix B — use deckCount from store */}
           <PileDisplay
             title="Draw"
@@ -810,7 +868,12 @@ export function GameScreen(): React.ReactElement {
       ) : (
         <div className="gs-hand-zone">
           <div className="gs-hand-header">
-            <span className="gs-zone-label">Hand</span>
+            <div className="gs-self-id">
+              <Avatar slug={currentPlayerAvatar} size={28} alt="" />
+              <span className="gs-self-name">
+                {lobbyPlayers.find((p: LobbyPlayer) => p.id === currentPlayerId)?.username ?? 'You'}
+              </span>
+            </div>
             <span className="gs-hand-count">{hand.length} cards</span>
           </div>
           {/* Issue 7 — inject CSS vars so groups and gap shrink when hand is full */}

@@ -55,11 +55,36 @@ export async function listInProgressForUser(userId: string): Promise<Array<{
   status: string;
   last_action_at: string;
   current_turn_user_id: string | null;
+  players: string[];
 }>> {
   const { data } = await supabaseAdmin
     .from('game_players')
-    .select('game_id, games!inner(id, lobby_code, status, last_action_at, current_turn_user_id)')
+    .select('game_id, games!inner(id, lobby_code, status, last_action_at, current_turn_user_id, state)')
     .eq('user_id', userId)
     .neq('games.status', 'ended');
-  return (data ?? []).map((r: any) => r.games);
+  return (data ?? []).map((r: any) => {
+    const g = r.games;
+    const state = g.state as GameInstance | null;
+    const players = (state?.players ?? []).map((p: any) => p.username).filter(Boolean) as string[];
+    return {
+      id: g.id,
+      lobby_code: g.lobby_code,
+      status: g.status,
+      last_action_at: g.last_action_at,
+      current_turn_user_id: g.current_turn_user_id,
+      players,
+    };
+  });
+}
+
+export async function deleteGame(gameId: string): Promise<void> {
+  await supabaseAdmin.from('game_players').delete().eq('game_id', gameId);
+  const { error } = await supabaseAdmin.from('games').delete().eq('id', gameId);
+  if (error) console.error('[Cleanup] deleteGame failed', gameId, error);
+}
+
+export async function deleteStaleGames(): Promise<void> {
+  const twoDaysAgo = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  await supabaseAdmin.from('games').delete().eq('status', 'ended');
+  await supabaseAdmin.from('games').delete().lt('last_action_at', twoDaysAgo);
 }

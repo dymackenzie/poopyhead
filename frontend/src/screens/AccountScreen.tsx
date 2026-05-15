@@ -9,6 +9,8 @@ import { supabase } from '../supabase';
 import { isPushSubscribed, subscribeToPush, unsubscribeFromPush } from '../push';
 import Button from '../components/Button';
 import Input from '../components/Input';
+import Avatar from '../components/Avatar';
+import { AVATAR_SLUGS } from '../avatars';
 import './AccountScreen.css';
 
 interface AccountScreenProps {
@@ -22,6 +24,10 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
   const authUser = useGameStore((state) => state.authUser);
   const authToken = useGameStore((state) => state.authToken);
   const setPushEnabled = useGameStore((state) => state.setPushEnabled);
+  const currentPlayerAvatar = useGameStore((s) => s.currentPlayerAvatar);
+
+  // --- Avatar ---
+  const [selectedAvatar, setSelectedAvatar] = useState<string | undefined>(currentPlayerAvatar);
 
   // --- Display name ---
   const [displayName, setDisplayName] = useState('');
@@ -56,18 +62,24 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
   // Sign out
   const [signOutLoading, setSignOutLoading] = useState(false);
 
-  // --- Load display name on mount ---
+  // --- Load display name and avatar on mount ---
   useEffect(() => {
     if (!authUser) return;
     supabase
       .from('profiles')
-      .select('display_name')
+      .select('display_name, avatar')
       .eq('id', authUser.id)
       .single()
       .then(({ data }) => {
         const name = data?.display_name ?? '';
         setDisplayName(name);
         setSavedName(name);
+        if (data?.avatar) {
+          setSelectedAvatar(data.avatar);
+          useGameStore.setState({ currentPlayerAvatar: data.avatar });
+        } else {
+          setSelectedAvatar(currentPlayerAvatar);
+        }
       });
   }, [authUser]);
 
@@ -202,6 +214,19 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
     }
   }, []);
 
+  // --- Pick avatar ---
+  const handlePickAvatar = useCallback(async (slug: string): Promise<void> => {
+    setSelectedAvatar(slug);
+    useGameStore.setState({ currentPlayerAvatar: slug });
+    if (authUser && !authUser.isAnonymous) {
+      try {
+        await supabase.from('profiles').update({ avatar: slug }).eq('id', authUser.id);
+      } catch {
+        // best-effort — store already updated
+      }
+    }
+  }, [authUser]);
+
   const nameChanged = displayName !== savedName;
 
   return (
@@ -211,6 +236,23 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
       </button>
 
       <h2 className="account-title">Account</h2>
+
+      {/* ── Avatar picker ──────────────────────── */}
+      <section className="account-section">
+        <h3 className="account-section-label">Avatar</h3>
+        <div className="account-avatar-grid">
+          {AVATAR_SLUGS.map((slug) => (
+            <Avatar
+              key={slug}
+              slug={slug}
+              size={60}
+              selected={slug === selectedAvatar}
+              onClick={() => handlePickAvatar(slug)}
+              alt={slug}
+            />
+          ))}
+        </div>
+      </section>
 
       {/* ── Display name ───────────────────────── */}
       <section className="account-section">

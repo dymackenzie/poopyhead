@@ -5,9 +5,12 @@
 .leaderboard-screen {
   display: flex;
   flex-direction: column;
-  padding: var(--space-5);
-  gap: var(--space-5);
+  padding: var(--space-4) var(--space-3);
+  gap: var(--space-4);
   position: relative;
+  max-height: calc(100dvh - var(--space-6));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Notebook margin line — matches account-screen::before */
@@ -91,11 +94,11 @@
 
 /*
   Grid columns:
-  [Name] 1fr | [Played] 40px | [Wins] 40px | [Win%] 44px | [Poopyhead] 44px | [Streak] 40px | [Menu] 28px
+  [Name] 1fr | [💩] 48px | [💩%] 52px | [Menu] 28px
 */
 .leaderboard-row {
   display: grid;
-  grid-template-columns: 1fr 40px 40px 44px 44px 40px 28px;
+  grid-template-columns: 1fr 48px 52px 28px;
   align-items: center;
   min-height: 44px;
   border-bottom: 1px solid var(--border-soft);
@@ -204,20 +207,22 @@
   color: var(--text-secondary);
 }
 
-/* ── Poopyhead column — hide on narrow screens ── */
+/* ── Poopyhead% column — hide on narrow screens ── */
 
 .leaderboard-cell--poop {
   /* visible by default */
 }
 
-@media (max-width: 359px) {
-  .leaderboard-row {
-    grid-template-columns: 1fr 40px 40px 44px 0px 40px 28px;
-  }
+.leaderboard-cell--pctpoop {
+  /* visible by default */
+}
 
-  .leaderboard-cell--poop {
-    display: none;
-  }
+/* grid is already compact enough for all screen sizes */
+
+@media (max-width: 480px) {
+  .leaderboard-cell { padding: var(--space-1) var(--space-2); font-size: 13px; }
+  .leaderboard-row { min-height: 40px; }
+  .leaderboard-row--header .leaderboard-cell { font-size: 10px; letter-spacing: 0.08em; }
 }
 
 /* ── Overflow menu button ──────────────────── */
@@ -313,4 +318,20 @@
 .leaderboard-dropdown-cancel:hover {
   background: var(--bg-surface-2);
   color: var(--text-secondary);
+}
+
+/* ── Name cell with avatar ─────────────────── */
+
+.leaderboard-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.leaderboard-name-wrap > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }

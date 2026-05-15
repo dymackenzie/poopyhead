@@ -200,8 +200,34 @@
 .gs-opponent-label {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   padding: 2px 0;
+}
+
+.gs-opponent-avatar {
+  flex-shrink: 0;
+}
+
+.gs-opponent-label--active .gs-opponent-avatar {
+  outline: 2px solid var(--accent-yellow, #f5a623);
+  outline-offset: 1px;
+  border-radius: 50%;
+}
+
+.gs-self-id {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.gs-self-name {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
 }
 
 .gs-active-dot {
@@ -721,23 +747,24 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 38px;
-  height: 54px;
+  width: 28px;
+  height: 40px;
   border-radius: var(--card-radius, 8px);
   background: var(--card-back, #1a1a2e);
   border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
   pointer-events: none;
   z-index: 45;
+  opacity: 0.25;
   will-change: transform, opacity;
 }
 
 .gs-card-play-anim--from-bottom {
-  animation: cardPlayFromBottom 420ms ease-out forwards;
+  animation: cardPlayFromBottom 250ms ease-out forwards;
 }
 
 .gs-card-play-anim--from-top {
-  animation: cardPlayFromTop 420ms ease-out forwards;
+  animation: cardPlayFromTop 250ms ease-out forwards;
 }
 
 /* =============================================
@@ -830,4 +857,144 @@
   border: 3px solid rgba(255,204,0,0.7);
   animation: bomb-ring 0.55s ease-out forwards;
   will-change: transform, opacity;
+}
+
+/* ── Menu Button ───────────────────────────── */
+
+.gs-menu-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 60;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.gs-menu-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--color-black);
+  background: var(--bg-surface-2);
+}
+
+/* ── Leave Game Overlay ─────────────────────── */
+
+.gs-leave-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.gs-leave-card {
+  background: var(--bg-surface);
+  border: 3px solid var(--color-black);
+  border-radius: 4px;
+  box-shadow: 5px 5px 0 var(--color-black);
+  padding: var(--space-5);
+  max-width: 320px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.gs-leave-title {
+  margin: 0;
+  font-size: var(--font-lg);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.gs-leave-body {
+  margin: 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.gs-leave-actions {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+.gs-leave-btn {
+  height: 40px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  cursor: pointer;
+  border: 2px solid var(--color-black);
+  transition: background var(--timing-fast), color var(--timing-fast);
+}
+
+.gs-leave-btn--secondary {
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+}
+
+.gs-leave-btn--secondary:hover {
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+}
+
+.gs-leave-btn--primary {
+  background: var(--color-black);
+  color: var(--bg-surface);
+}
+
+.gs-leave-btn--primary:hover {
+  background: var(--text-primary);
+}
+
+/* ── Pile bomb glow effect ──────────────────── */
+
+.gs-pile-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.gs-pile--bomb {
+  animation: gs-pile-bomb 600ms ease-out;
+}
+
+.gs-pile--bomb::after {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(255, 235, 150, 0.85) 0%, rgba(255, 170, 40, 0.55) 35%, transparent 70%);
+  animation: gs-pile-bomb-flash 600ms ease-out forwards;
+}
+
+@keyframes gs-pile-bomb {
+  0%   { transform: scale(1); }
+  20%  { transform: scale(1.12); filter: brightness(1.6); }
+  60%  { transform: scale(0.96); filter: brightness(1.2); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes gs-pile-bomb-flash {
+  0%   { opacity: 0; transform: scale(0.4); }
+  30%  { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.4); }
 }

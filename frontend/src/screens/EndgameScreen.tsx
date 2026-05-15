@@ -3,6 +3,7 @@ import { useGameStore } from '../store';
 import { requestRematch } from '../socketClient';
 import Button from '../components/Button';
 import Card from '../components/Card';
+import Avatar from '../components/Avatar';
 import './EndgameScreen.css';
 import type { GamePlayer } from '../store';
 
@@ -94,10 +95,13 @@ export function EndgameScreen(): React.ReactElement {
                       isMe    ? 'endgame-player-row--me'    : '',
                     ].filter(Boolean).join(' ')}
                   >
-                    <span className="endgame-player-name">
-                      {player.username}
-                      {isMe && <span className="endgame-you-tag">you</span>}
-                    </span>
+                    <div className="endgame-player-main">
+                      <Avatar slug={player.avatar} size={36} alt="" />
+                      <span className="endgame-player-name">
+                        {player.username}
+                        {isMe && <span className="endgame-you-tag">you</span>}
+                      </span>
+                    </div>
                     {isLoser && (
                       <span className="endgame-poop-badge" aria-hidden="true">&#128169;</span>
                     )}

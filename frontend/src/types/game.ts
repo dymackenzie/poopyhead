@@ -7,6 +7,7 @@ export interface GameCard {
 export interface LobbyPlayer {
   id: string;
   username: string;
+  avatar?: string;
   isBot?: boolean;
   cardsRemaining?: number;
   ready?: boolean;
@@ -47,6 +48,7 @@ export interface ActiveGameSummary {
   status: string;
   last_action_at: string;
   current_turn_user_id: string | null;
+  players?: string[];
 }
 
 export interface ResumeGameResponse {

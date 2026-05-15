@@ -115,7 +115,8 @@ export function emitEvent<TResponse = unknown>(event: string, data: Record<strin
  */
 export function createLobby(
   username: string,
-  settings: LobbySettings
+  settings: LobbySettings,
+  avatar?: string
 ): Promise<LobbyResponse> {
   return new Promise((resolve) => {
     emitEvent('createLobby', {
@@ -124,6 +125,7 @@ export function createLobby(
       turnTimerSeconds: settings.turnTimerSeconds,
       botCount: settings.botCount ?? 0,
       mode: settings.mode ?? 'async',
+      avatar,
     }, resolve);
   });
 }
@@ -131,9 +133,9 @@ export function createLobby(
 /**
  * Join lobby.
  */
-export function joinLobby(code: string, username: string): Promise<LobbyResponse> {
+export function joinLobby(code: string, username: string, avatar?: string): Promise<LobbyResponse> {
   return new Promise((resolve) => {
-    emitEvent('joinLobby', { code, username }, resolve);
+    emitEvent('joinLobby', { code, username, avatar }, resolve);
   });
 }
 

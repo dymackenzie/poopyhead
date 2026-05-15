@@ -5,12 +5,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../store';
+import Avatar from '../components/Avatar';
 import './LeaderboardScreen.css';
 
 interface LeaderboardRow {
   userId: string;
   displayName: string;
   isAnonymous: boolean;
+  avatar?: string | null;
   gamesPlayed: number;
   wins: number;
   poopyheadCount: number;
@@ -19,16 +21,16 @@ interface LeaderboardRow {
   isSelf: boolean;
 }
 
-type SortKey = 'wins' | 'gamesPlayed' | 'winPct' | 'poopyheadCount' | 'currentStreak';
+type SortKey = 'poopyheadCount' | 'poopyheadPct';
 type SortDir = 'asc' | 'desc';
 
-function winPct(row: LeaderboardRow): number {
-  return row.gamesPlayed > 0 ? row.wins / row.gamesPlayed : -1;
+function poopyheadPct(row: LeaderboardRow): number {
+  return row.gamesPlayed > 0 ? row.poopyheadCount / row.gamesPlayed : -1;
 }
 
-function winPctDisplay(row: LeaderboardRow): string {
+function poopyheadPctDisplay(row: LeaderboardRow): string {
   return row.gamesPlayed > 0
-    ? Math.round((row.wins / row.gamesPlayed) * 100) + '%'
+    ? Math.round((row.poopyheadCount / row.gamesPlayed) * 100) + '%'
     : '—';
 }
 
@@ -41,25 +43,13 @@ function sortRows(rows: LeaderboardRow[], key: SortKey, dir: SortDir): Leaderboa
     let bVal: number;
 
     switch (key) {
-      case 'wins':
-        aVal = a.wins;
-        bVal = b.wins;
-        break;
-      case 'gamesPlayed':
-        aVal = a.gamesPlayed;
-        bVal = b.gamesPlayed;
-        break;
-      case 'winPct':
-        aVal = winPct(a);
-        bVal = winPct(b);
-        break;
       case 'poopyheadCount':
         aVal = a.poopyheadCount;
         bVal = b.poopyheadCount;
         break;
-      case 'currentStreak':
-        aVal = a.currentStreak;
-        bVal = b.currentStreak;
+      case 'poopyheadPct':
+        aVal = poopyheadPct(a);
+        bVal = poopyheadPct(b);
         break;
     }
 
@@ -80,7 +70,7 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps): React.Rea
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toast, setToast] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('wins');
+  const [sortKey, setSortKey] = useState<SortKey>('poopyheadCount');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
@@ -213,40 +203,12 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps): React.Rea
             <div
               className="leaderboard-cell"
               role="columnheader"
-              onClick={() => {/* name column not sortable */}}
               style={{ cursor: 'default' }}
             >
               Name
             </div>
             <div
               className="leaderboard-cell leaderboard-cell--numeric"
-              role="columnheader"
-              onClick={() => handleSort('gamesPlayed')}
-              aria-sort={sortKey === 'gamesPlayed' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
-              title="Games played"
-            >
-              Played{sortIndicator('gamesPlayed')}
-            </div>
-            <div
-              className="leaderboard-cell leaderboard-cell--numeric"
-              role="columnheader"
-              onClick={() => handleSort('wins')}
-              aria-sort={sortKey === 'wins' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
-              title="Wins"
-            >
-              Wins{sortIndicator('wins')}
-            </div>
-            <div
-              className="leaderboard-cell leaderboard-cell--numeric"
-              role="columnheader"
-              onClick={() => handleSort('winPct')}
-              aria-sort={sortKey === 'winPct' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
-              title="Win percentage"
-            >
-              Win%{sortIndicator('winPct')}
-            </div>
-            <div
-              className="leaderboard-cell leaderboard-cell--numeric leaderboard-cell--poop"
               role="columnheader"
               onClick={() => handleSort('poopyheadCount')}
               aria-sort={sortKey === 'poopyheadCount' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
@@ -257,11 +219,11 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps): React.Rea
             <div
               className="leaderboard-cell leaderboard-cell--numeric"
               role="columnheader"
-              onClick={() => handleSort('currentStreak')}
-              aria-sort={sortKey === 'currentStreak' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
-              title="Current win streak"
+              onClick={() => handleSort('poopyheadPct')}
+              aria-sort={sortKey === 'poopyheadPct' ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
+              title="Poopyhead percentage"
             >
-              Streak{sortIndicator('currentStreak')}
+              &#128169;%{sortIndicator('poopyheadPct')}
             </div>
             <div
               className="leaderboard-cell leaderboard-cell--no-sort"
@@ -279,47 +241,29 @@ export function LeaderboardScreen({ onBack }: LeaderboardScreenProps): React.Rea
               aria-rowindex={idx + 2}
             >
               {/* Name */}
-              <div
-                className={`leaderboard-cell leaderboard-cell--name${row.isSelf ? '' : ''}`}
-                role="cell"
-              >
-                <span
-                  className={row.isAnonymous ? 'leaderboard-name--anonymous' : undefined}
-                  title={row.displayName}
-                >
-                  {row.displayName}
-                </span>
-                {row.isSelf && row.isAnonymous && (
-                  <span className="leaderboard-anon-note">(anonymous)</span>
-                )}
+              <div className="leaderboard-cell leaderboard-cell--name" role="cell">
+                <div className="leaderboard-name-wrap">
+                  <Avatar slug={row.avatar ?? undefined} size={28} alt="" />
+                  <span
+                    className={row.isAnonymous ? 'leaderboard-name--anonymous' : undefined}
+                    title={row.isAnonymous ? 'Guest' : row.displayName}
+                  >
+                    {row.isAnonymous ? 'Guest' : row.displayName}
+                  </span>
+                  {row.isSelf && row.isAnonymous && (
+                    <span className="leaderboard-anon-note">(you)</span>
+                  )}
+                </div>
               </div>
 
-              {/* Played */}
+              {/* Poopyhead count */}
               <div className="leaderboard-cell leaderboard-cell--numeric" role="cell">
-                {row.gamesPlayed}
-              </div>
-
-              {/* Wins */}
-              <div className="leaderboard-cell leaderboard-cell--numeric" role="cell">
-                {row.wins}
-              </div>
-
-              {/* Win% */}
-              <div className="leaderboard-cell leaderboard-cell--numeric" role="cell">
-                {winPctDisplay(row)}
-              </div>
-
-              {/* Poopyhead */}
-              <div
-                className="leaderboard-cell leaderboard-cell--numeric leaderboard-cell--poop"
-                role="cell"
-              >
                 {row.poopyheadCount}
               </div>
 
-              {/* Streak */}
+              {/* Poopyhead % */}
               <div className="leaderboard-cell leaderboard-cell--numeric" role="cell">
-                {row.currentStreak > 0 ? `${row.currentStreak}` : '—'}
+                {poopyheadPctDisplay(row)}
               </div>
 
               {/* Overflow menu — only for non-self rows */}

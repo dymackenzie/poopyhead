@@ -7,6 +7,7 @@ import { useGameStore } from './store';
 import { initSocket, resumeGame } from './socketClient';
 import { supabase, authReady } from './supabase';
 import { getSocket } from './socketClient';
+import { randomAvatar } from './avatars';
 import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 import EndgameScreen from './screens/EndgameScreen';
@@ -24,8 +25,20 @@ export function App(): React.ReactElement {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setAuth({ id: session.user.id, isAnonymous: session.user.is_anonymous ?? false }, session.access_token);
+        if (!session.user.is_anonymous) {
+          supabase.from('profiles').select('avatar').eq('id', session.user.id).single()
+            .then(({ data }) => {
+              if (data?.avatar) useGameStore.setState({ currentPlayerAvatar: data.avatar });
+            });
+        } else {
+          // Guest: keep whatever avatar is in the store, assign one if missing
+          if (!useGameStore.getState().currentPlayerAvatar) {
+            useGameStore.setState({ currentPlayerAvatar: randomAvatar() });
+          }
+        }
       } else {
         setAuth(null, null);
+        useGameStore.setState({ currentPlayerAvatar: randomAvatar() });
       }
       if (event === 'TOKEN_REFRESHED' && session) {
         const s = getSocket();
@@ -43,6 +56,14 @@ export function App(): React.ReactElement {
       if (session?.user) {
         setAuth({ id: session.user.id, isAnonymous: session.user.is_anonymous ?? false }, session.access_token);
       }
+      // Set initial avatar: random for guests, DB for signed-in
+      useGameStore.setState({ currentPlayerAvatar: randomAvatar() });
+      if (session?.user && !session.user.is_anonymous) {
+        supabase.from('profiles').select('avatar').eq('id', session.user.id).single()
+          .then(({ data }) => {
+            if (data?.avatar) useGameStore.setState({ currentPlayerAvatar: data.avatar });
+          });
+      }
       initSocket(session?.access_token ?? null, {
       onConnect: () => {
         connect();
@@ -55,7 +76,8 @@ export function App(): React.ReactElement {
             if (!res.success || !res.game || !res.playerId) return;
             const game = res.game as any;
             const me = game.players?.find((p: any) => p.id === res.playerId);
-            const lobbyPlayers = game.players?.map((p: any) => ({ id: p.id, username: p.username, ready: true })) ?? [];
+            const prevById = new Map(useGameStore.getState().lobbyPlayers.map((p: GamePlayer) => [p.id, p]));
+            const lobbyPlayers = game.players?.map((p: any) => ({ id: p.id, username: p.username, ready: true, avatar: prevById.get(p.id)?.avatar })) ?? [];
             useGameStore.setState({
               gameStatus: 'playing',
               gameId: game.id,
@@ -105,7 +127,8 @@ export function App(): React.ReactElement {
           // Read currentPlayerId from store at event time to avoid stale closure
           const { currentPlayerId } = useGameStore.getState();
           const me = game.players.find((p: any) => p.id === currentPlayerId);
-          const lobbyPlayers = game.players.map((p: any) => ({ id: p.id, username: p.username, ready: true }));
+          const prevById = new Map(useGameStore.getState().lobbyPlayers.map((p: GamePlayer) => [p.id, p]));
+          const lobbyPlayers = game.players.map((p: any) => ({ id: p.id, username: p.username, ready: true, avatar: prevById.get(p.id)?.avatar }));
           const gamePhase: 'swapping' | 'playing' = game.status === 'swapping' ? 'swapping' : 'playing';
 
           updateGameState({
@@ -202,7 +225,7 @@ export function App(): React.ReactElement {
         }
 
         // Issue 8 — bomb animation: fire when the pile was just cleared by a bomb
-        if (dataAny.bombCleared === true || dataAny.isBomb === true) {
+        if (dataAny.bombTriggered === true) {
           patch.bombAnimation = true;
         }
 
