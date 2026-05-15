@@ -29,11 +29,9 @@ function timeAgo(isoString: string): string {
 
 export function LobbyScreen(): React.ReactElement {
   const [mode, setMode] = useState<LobbyMode>('home');
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(() => useGameStore.getState().currentPlayerDisplayName ?? '');
   const [lobbyCode, setLobbyCode] = useState('');
-  const [bombEnabled, setBombEnabled] = useState(false);
   const [botCount, setBotCount] = useState(0);
-  const [gameMode, setGameMode] = useState<'live' | 'async'>('async');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copyFeedback, setCopyFeedback] = useState(false);
@@ -48,6 +46,13 @@ export function LobbyScreen(): React.ReactElement {
   const activeGames = useGameStore((state) => state.activeGames);
   const setActiveGames = useGameStore((state) => state.setActiveGames);
   const currentPlayerAvatar = useGameStore((s) => s.currentPlayerAvatar);
+  const currentPlayerDisplayName = useGameStore((s) => s.currentPlayerDisplayName);
+
+  useEffect(() => {
+    if (currentPlayerDisplayName && !username) {
+      setUsername(currentPlayerDisplayName);
+    }
+  }, [currentPlayerDisplayName]);
 
   useEffect(() => {
     if (mode !== 'home' || !authToken) return;
@@ -69,7 +74,7 @@ export function LobbyScreen(): React.ReactElement {
     setLoading(true);
     setError('');
     try {
-      const result = await createLobby(username.trim(), { bombEnabled, turnTimerSeconds: 60, botCount, mode: gameMode }, currentPlayerAvatar);
+      const result = await createLobby(username.trim(), { bombEnabled: false, turnTimerSeconds: 60, botCount, mode: 'async' }, currentPlayerAvatar);
       if (result.success) {
         useGameStore.setState({
           lobbyCode: result.lobby?.code,
@@ -122,7 +127,7 @@ export function LobbyScreen(): React.ReactElement {
   const handleBack = (): void => {
     setMode('home');
     setError('');
-    setUsername('');
+    setUsername(useGameStore.getState().currentPlayerDisplayName ?? '');
     setLobbyCode('');
   };
 

@@ -21,6 +21,7 @@ type LinkTab = 'phone' | 'email';
 type PhoneStep = 'input' | 'otp';
 
 export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElement {
+  const SHOW_PHONE_LINKING = false;
   const authUser = useGameStore((state) => state.authUser);
   const authToken = useGameStore((state) => state.authToken);
   const setPushEnabled = useGameStore((state) => state.setPushEnabled);
@@ -28,6 +29,7 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
 
   // --- Avatar ---
   const [selectedAvatar, setSelectedAvatar] = useState<string | undefined>(currentPlayerAvatar);
+  const [avatarError, setAvatarError] = useState('');
 
   // --- Display name ---
   const [displayName, setDisplayName] = useState('');
@@ -43,7 +45,7 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
   const pushSupported = 'PushManager' in window;
 
   // --- Account linking ---
-  const [linkTab, setLinkTab] = useState<LinkTab>('phone');
+  const [linkTab, setLinkTab] = useState<LinkTab>('email');
 
   // Phone OTP flow
   const [phone, setPhone] = useState('');
@@ -71,9 +73,10 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
       .eq('id', authUser.id)
       .single()
       .then(({ data }) => {
-        const name = data?.display_name ?? '';
+        const name = data?.display_name ?? useGameStore.getState().currentPlayerDisplayName ?? '';
         setDisplayName(name);
         setSavedName(name);
+        if (name) useGameStore.setState({ currentPlayerDisplayName: name });
         if (data?.avatar) {
           setSelectedAvatar(data.avatar);
           useGameStore.setState({ currentPlayerAvatar: data.avatar });
@@ -100,14 +103,18 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ display_name: trimmed })
-        .eq('id', authUser.id);
-      if (error) throw error;
+        .upsert({ id: authUser.id, display_name: trimmed, is_anonymous: authUser.isAnonymous });
+      if (error) {
+        console.error('[AccountScreen] display_name save failed:', error);
+        throw error;
+      }
       setSavedName(trimmed);
+      useGameStore.setState({ currentPlayerDisplayName: trimmed });
       setNameSaved(true);
       setTimeout(() => setNameSaved(false), 2000);
-    } catch {
-      setNameError('Could not save name. Try again.');
+    } catch (err: unknown) {
+      const detail = (err as any)?.message ?? '';
+      setNameError(detail ? `Could not save name: ${detail}` : 'Could not save name. Try again.');
     } finally {
       setNameLoading(false);
     }
@@ -170,9 +177,9 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
         type: 'phone_change',
       });
       if (error) throw error;
-      // Mark profile as no longer anonymous
+      // Mark profile as no longer anonymous (upsert in case profile row is missing)
       if (authUser) {
-        await supabase.from('profiles').update({ is_anonymous: false }).eq('id', authUser.id);
+        await supabase.from('profiles').upsert({ id: authUser.id, is_anonymous: false });
       }
       setPhoneSuccess('Phone linked successfully.');
     } catch (err: unknown) {
@@ -217,13 +224,26 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
   // --- Pick avatar ---
   const handlePickAvatar = useCallback(async (slug: string): Promise<void> => {
     setSelectedAvatar(slug);
+    setAvatarError('');
     useGameStore.setState({ currentPlayerAvatar: slug });
-    if (authUser && !authUser.isAnonymous) {
-      try {
-        await supabase.from('profiles').update({ avatar: slug }).eq('id', authUser.id);
-      } catch {
-        // best-effort — store already updated
+    if (!authUser) return;
+    try {
+      const currentName = useGameStore.getState().currentPlayerDisplayName;
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: authUser.id,
+          avatar: slug,
+          is_anonymous: authUser.isAnonymous,
+          ...(currentName ? { display_name: currentName } : {}),
+        });
+      if (error) {
+        console.error('[AccountScreen] avatar save failed:', error);
+        setAvatarError(`Could not save avatar: ${error.message}`);
       }
+    } catch (err: unknown) {
+      const detail = (err as any)?.message ?? '';
+      setAvatarError(detail ? `Could not save avatar: ${detail}` : 'Could not save avatar. Try again.');
     }
   }, [authUser]);
 
@@ -252,6 +272,7 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
             />
           ))}
         </div>
+        {avatarError && <p className="lobby-error">{avatarError}</p>}
       </section>
 
       {/* ── Display name ───────────────────────── */}
@@ -310,22 +331,24 @@ export function AccountScreen({ onBack }: AccountScreenProps): React.ReactElemen
           <p className="account-muted">Link an account so you can resume games on any device.</p>
 
           {/* Tab switcher */}
-          <div className="account-tabs">
-            <button
-              className={`account-tab ${linkTab === 'phone' ? 'account-tab--active' : ''}`}
-              onClick={() => { setLinkTab('phone'); setPhoneError(''); setEmailError(''); }}
-            >
-              Phone
-            </button>
-            <button
-              className={`account-tab ${linkTab === 'email' ? 'account-tab--active' : ''}`}
-              onClick={() => { setLinkTab('email'); setPhoneError(''); setEmailError(''); }}
-            >
-              Email
-            </button>
-          </div>
+          {SHOW_PHONE_LINKING && (
+            <div className="account-tabs">
+              <button
+                className={`account-tab ${linkTab === 'phone' ? 'account-tab--active' : ''}`}
+                onClick={() => { setLinkTab('phone'); setPhoneError(''); setEmailError(''); }}
+              >
+                Phone
+              </button>
+              <button
+                className={`account-tab ${linkTab === 'email' ? 'account-tab--active' : ''}`}
+                onClick={() => { setLinkTab('email'); setPhoneError(''); setEmailError(''); }}
+              >
+                Email
+              </button>
+            </div>
+          )}
 
-          {linkTab === 'phone' && (
+          {SHOW_PHONE_LINKING && linkTab === 'phone' && (
             <div className="account-link-panel">
               {phoneSuccess ? (
                 <p className="account-success">&#10003; {phoneSuccess}</p>

@@ -24,16 +24,13 @@ export function App(): React.ReactElement {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
         setAuth({ id: session.user.id, isAnonymous: session.user.is_anonymous ?? false }, session.access_token);
-        if (!session.user.is_anonymous) {
-          supabase.from('profiles').select('avatar').eq('id', session.user.id).single()
-            .then(({ data }) => {
-              if (data?.avatar) useGameStore.setState({ currentPlayerAvatar: data.avatar });
-            });
-        } else {
-          // Guest: keep whatever avatar is in the store, assign one if missing
-          if (!useGameStore.getState().currentPlayerAvatar) {
-            useGameStore.setState({ currentPlayerAvatar: randomAvatar() });
-          }
+        supabase.from('profiles').select('avatar, display_name').eq('id', session.user.id).single()
+          .then(({ data }) => {
+            if (data?.avatar) useGameStore.setState({ currentPlayerAvatar: data.avatar });
+            if (data?.display_name) useGameStore.setState({ currentPlayerDisplayName: data.display_name });
+          });
+        if (!useGameStore.getState().currentPlayerAvatar) {
+          useGameStore.setState({ currentPlayerAvatar: randomAvatar() });
         }
       } else {
         setAuth(null, null);
@@ -57,11 +54,17 @@ export function App(): React.ReactElement {
       }
       // Set initial avatar: random for guests, DB for signed-in
       useGameStore.setState({ currentPlayerAvatar: randomAvatar() });
-      if (session?.user && !session.user.is_anonymous) {
-        supabase.from('profiles').select('avatar').eq('id', session.user.id).single()
+      if (session?.user) {
+        supabase.from('profiles').select('avatar, display_name').eq('id', session.user.id).single()
           .then(({ data }) => {
             if (data?.avatar) useGameStore.setState({ currentPlayerAvatar: data.avatar });
+            if (data?.display_name) useGameStore.setState({ currentPlayerDisplayName: data.display_name });
           });
+      }
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch((err) => {
+          console.warn('[App] Service worker registration failed:', err);
+        });
       }
       attachSocketEventHandlers(session?.access_token ?? null);
     };

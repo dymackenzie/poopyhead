@@ -2,10 +2,29 @@
  * Subscribe the current device to Web Push notifications.
  * Call only after the user explicitly opts in — never auto-prompt.
  */
+
+async function getReadyRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) return null;
+  const regs = await navigator.serviceWorker.getRegistrations();
+  if (regs.length === 0) return null;
+  try {
+    return await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Service worker not ready')), 5000)
+      ),
+    ]);
+  } catch {
+    return null;
+  }
+}
+
 export async function subscribeToPush(jwt: string): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
 
-  const reg = await navigator.serviceWorker.ready;
+  const reg = await getReadyRegistration();
+  if (!reg) return false;
+
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return false;
 
@@ -44,8 +63,8 @@ export async function subscribeToPush(jwt: string): Promise<boolean> {
  * Unsubscribe from push notifications on the current device.
  */
 export async function unsubscribeFromPush(): Promise<void> {
-  if (!('serviceWorker' in navigator)) return;
-  const reg = await navigator.serviceWorker.ready;
+  const reg = await getReadyRegistration();
+  if (!reg) return;
   const sub = await reg.pushManager.getSubscription();
   if (sub) await sub.unsubscribe();
 }
@@ -55,7 +74,8 @@ export async function unsubscribeFromPush(): Promise<void> {
  */
 export async function isPushSubscribed(): Promise<boolean> {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
-  const reg = await navigator.serviceWorker.ready;
+  const reg = await getReadyRegistration();
+  if (!reg) return false;
   const sub = await reg.pushManager.getSubscription();
   return sub !== null;
 }

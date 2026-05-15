@@ -2,8 +2,24 @@ import { supabaseAdmin } from '../supabase/client.js';
 import type { GameInstance } from './GameManager.js';
 
 export async function saveGame(game: GameInstance, lobbyMode: 'live' | 'async'): Promise<void> {
+  // Hoist authPlayers so we can gate both FK columns with the same set of
+  // verified auth users (only non-bots with userId are safe to write to profiles FK).
+  const authPlayers = game.players.filter(p => !p.isBot && p.userId);
+  const authUserIds = new Set(authPlayers.map(p => p.userId!));
+
   const currentPlayer = game.players[game.currentPlayerIndex];
-  const currentTurnUserId = currentPlayer?.userId ?? null;
+  const currentTurnUserId =
+    currentPlayer?.userId && authUserIds.has(currentPlayer.userId)
+      ? currentPlayer.userId
+      : null;
+
+  const loserPlayer = game.loser
+    ? game.players.find(p => p.id === game.loser)
+    : undefined;
+  const loserUserId =
+    loserPlayer?.userId && authUserIds.has(loserPlayer.userId)
+      ? loserPlayer.userId
+      : null;
 
   const { error: gameError } = await supabaseAdmin.from('games').upsert({
     id: game.id,
@@ -15,9 +31,7 @@ export async function saveGame(game: GameInstance, lobbyMode: 'live' | 'async'):
     bomb_enabled: game.bombEnabled,
     player_count: game.players.length,
     bot_count: game.players.filter(p => p.isBot).length,
-    loser_user_id: game.loser
-      ? game.players.find(p => p.id === game.loser)?.userId ?? null
-      : null,
+    loser_user_id: loserUserId,
     started_at: game.startedAt ?? null,
     last_action_at: new Date().toISOString(),
     ended_at: game.endedAt ?? null,
@@ -25,15 +39,31 @@ export async function saveGame(game: GameInstance, lobbyMode: 'live' | 'async'):
 
   if (gameError) throw gameError;
 
-  const authPlayers = game.players.filter(p => !p.isBot && p.userId);
   if (authPlayers.length === 0) return;
 
-  const rows = authPlayers.map(p => ({
-    game_id: game.id,
-    user_id: p.userId!,
-    player_id: p.id,
-    was_loser: game.status === 'ended' ? p.id === game.loser : null,
-  }));
+  // De-duplicate by user_id — the same auth user may occupy multiple player
+  // slots (e.g. reconnect into a new slot while the old slot lingers as
+  // wasReplaced). Postgres rejects ON CONFLICT DO UPDATE when source rows
+  // collide on the conflict key, so keep exactly one row per user.
+  const rowsByUserId = new Map<string, {
+    game_id: string;
+    user_id: string;
+    player_id: string;
+    was_loser: boolean | null;
+  }>();
+  for (const p of authPlayers) {
+    const row = {
+      game_id: game.id,
+      user_id: p.userId!,
+      player_id: p.id,
+      was_loser: game.status === 'ended' ? p.id === game.loser : null,
+    };
+    const existing = rowsByUserId.get(row.user_id);
+    if (!existing || p.wasReplaced !== true) {
+      rowsByUserId.set(row.user_id, row);
+    }
+  }
+  const rows = Array.from(rowsByUserId.values());
 
   const { error: playersError } = await supabaseAdmin.from('game_players').upsert(rows);
   if (playersError) throw playersError;
